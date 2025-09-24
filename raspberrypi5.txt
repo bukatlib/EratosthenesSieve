@@ -1,0 +1,220 @@
+Primes to: 100'000'000'000
+sieve size: 49999999999 bits (6250000000 bytes)
+Sieve initialized in 1.16731 secs
+Primes sieved in 15.2112 secs.
+Found 4118054813 primes in 0.498838 secs (bandwidth 12529.1 MB/s).
+
+# perf stat
+ Performance counter stats for './eratosthenes_sieve':
+
+         63 518,84 msec task-clock:u                     #    3,708 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+           381 759      page-faults:u                    #    6,010 K/sec                     
+   149 272 218 906      cycles:u                         #    2,350 GHz                       
+   438 416 608 902      instructions:u                   #    2,94  insn per cycle            
+    29 594 339 630      branches:u                       #  465,914 M/sec                     
+       656 278 620      branch-misses:u                  #    2,22% of all branches           
+
+      17,131647469 seconds time elapsed
+
+      62,465341000 seconds user
+       1,051483000 seconds sys
+
+# perf stat -e cycles,stalled-cycles-backend,stalled-cycles-frontend
+ Performance counter stats for './eratosthenes_sieve':
+
+   148 525 009 172      cycles:u                                                              
+    16 238 807 105      stalled-cycles-backend:u         #   10,93% backend cycles idle       
+       446 215 191      stalled-cycles-frontend:u        #    0,30% frontend cycles idle      
+
+      16,993951693 seconds time elapsed
+
+      62,120648000 seconds user
+       1,015683000 seconds sys
+
+# perf stat -e L1-dcache-loads,L1-dcache-load-misses,L1-icache-loads,L1-icache-load-misses,LLC-loads,LLC-load-misses
+ Performance counter stats for './eratosthenes_sieve':
+
+   138 186 185 424      L1-dcache-loads:u                                                     
+     3 153 575 263      L1-dcache-load-misses:u          #    2,28% of all L1-dcache accesses 
+   123 446 106 730      L1-icache-loads:u                                                     
+           161 726      L1-icache-load-misses:u          #    0,00% of all L1-icache accesses 
+     1 745 489 637      LLC-loads:u                                                           
+       341 670 361      LLC-load-misses:u                #   19,57% of all LL-cache accesses  
+
+      17,117385700 seconds time elapsed
+
+      62,584648000 seconds user
+       1,007688000 seconds sys
+
+# perf stat -d ./prime_sieve_bench 235000000000 -
+sieve size: 117499999999 bits (14687500000 bytes)
+Sieve initialized in 2.63971 secs
+Primes sieved in 41.7882 secs.
+Found 9347869016 primes in 1.13028 secs (bandwidth 12994.6 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 235000000000 -':
+
+        174 882,31 msec task-clock:u                     #    3,813 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+           896 883      page-faults:u                    #    5,128 K/sec                     
+   405 172 081 660      cycles:u                         #    2,317 GHz                         (87,49%)
+ 1 086 367 630 886      instructions:u                   #    2,68  insn per cycle              (87,50%)
+    79 497 224 773      branches:u                       #  454,576 M/sec                       (87,50%)
+     2 120 711 956      branch-misses:u                  #    2,67% of all branches             (87,50%)
+   338 039 586 522      L1-dcache-loads:u                #    1,933 G/sec                       (87,50%)
+     9 061 170 915      L1-dcache-load-misses:u          #    2,68% of all L1-dcache accesses   (87,50%)
+     5 909 067 800      LLC-loads:u                      #   33,789 M/sec                       (87,50%)
+     1 349 808 947      LLC-load-misses:u                #   22,84% of all LL-cache accesses    (74,99%)
+
+      45,870342464 seconds time elapsed
+
+     170,070950000 seconds user
+       4,806048000 seconds sys
+
+# Counting bits on ARM64
+    1710:       6d400c20        ldp     d0, d3, [x1]
+    1714:       91001042        add     x2, x2, #0x4
+    1718:       6d410422        ldp     d2, d1, [x1, #16]
+    171c:       91008021        add     x1, x1, #0x20
+    1720:       0e205800        cnt     v0.8b, v0.8b
+    1724:       0e205863        cnt     v3.8b, v3.8b
+    1728:       0e205842        cnt     v2.8b, v2.8b
+    172c:       0e205821        cnt     v1.8b, v1.8b
+    1730:       0e31b800        addv    b0, v0.8b
+    1734:       0e31b863        addv    b3, v3.8b
+    1738:       0e31b842        addv    b2, v2.8b
+    173c:       0e31b821        addv    b1, v1.8b
+    1740:       6e0c0460        mov     v0.s[1], v3.s[0]
+    1744:       6e140440        mov     v0.s[2], v2.s[0]
+    1748:       6e1c0420        mov     v0.s[3], v1.s[0]
+    174c:       0ea010a5        saddw   v5.2d, v5.2d, v0.2s
+    1750:       4ea01084        saddw2  v4.2d, v4.2d, v0.4s
+    1754:       eb02007f        cmp     x3, x2
+    1758:       54fffdc8        b.hi    1710 <_ZN12Eratosthenes11prime_countEv._omp_fn.0+0x70>  // b.pmor
+
+# Find next true bit on ARM64
+    1fec:       dac00000        rbit    x0, x0
+    1ff0:       dac01000        clz     x0, x0
+
+# Hot spots in the sieving code on ARM64 (~94 % in total)
+    3.93 :   1a60:   lsr     x3, x0, #6
+    0.26 :   1a64:   lsl     x2, x27, x0
+    0.05 :   1a68:   add     x0, x0, x12
+    0.03 :   1a6c:   ldr     x6, [x4, x3, lsl #3]
+   65.31 :   1a70:   bic     x2, x6, x2
+    0.00 :   1a74:   str     x2, [x4, x3, lsl #3]
+    0.01 :   1a78:   cmp     x0, x7
+    0.46 :   1a7c:   b.cc    1a60 <Eratosthenes::sieve_primes() [clone ._omp_fn.0]+0x240>  // b.lo, b.ul, b.last
+
+    0.00 :   1a08:   ldr     x6, [x15, x0, lsl #3]
+   16.87 :   1a0c:   add     x4, x0, #0x1
+    0.00 :   1a10:   ldr     x3, [x2]
+    0.17 :   1a14:   cmp     x12, x4
+    0.00 :   1a18:   csel    x0, x4, xzr, hi // hi = pmore
+    0.01 :   1a1c:   and     x3, x3, x6
+    0.00 :   1a20:   str     x3, [x2], #8
+    0.10 :   1a24:   cmp     x13, x2
+    6.49 :   1a28:   b.ne    1a08 <Eratosthenes::sieve_primes() [clone ._omp_fn.0]+0x1e8>  // b.any
+
+# Vectorized zeroing masks for small primes on ARM64 (hotspot ~9.6 %)
+    0.04 :   1cb0:   ldr     q0, [x26, x2]
+    6.02 :   1cb4:   ldr     q1, [x7, x2]
+    2.83 :   1cb8:   and     v0.16b, v0.16b, v1.16b
+    0.38 :   1cbc:   str     q0, [x26, x2]
+    0.18 :   1cc0:   add     x2, x2, #0x10
+    0.07 :   1cc4:   cmp     x11, x2
+    0.05 :   1cc8:   b.ne    1cb0
+
+# Unrolled clearing of bits for large primes on ARM64 (hotspot ~65.4 %)
+    5.27 :   19e8:   lsr     x27, x0, #6
+    0.98 :   19ec:   lsr     x26, x10, #6
+    0.59 :   19f0:   lsl     x14, x2, x0
+    0.10 :   19f4:   lsr     x24, x11, #6
+    3.01 :   19f8:   lsl     x13, x2, x10
+    0.85 :   19fc:   lsr     x15, x6, #6
+    0.04 :   1a00:   ldr     x3, [x5, x27, lsl #3]
+   18.96 :   1a04:   lsl     x12, x2, x11
+    0.56 :   1a08:   add     x0, x0, x7
+    0.32 :   1a0c:   add     x10, x10, x7
+    0.21 :   1a10:   bic     x14, x3, x14
+    0.03 :   1a14:   str     x14, [x5, x27, lsl #3]
+    0.70 :   1a18:   lsl     x14, x2, x6
+    0.38 :   1a1c:   add     x11, x11, x7
+    0.01 :   1a20:   ldr     x27, [x5, x26, lsl #3]
+   13.13 :   1a24:   add     x6, x6, x7
+    0.27 :   1a28:   bic     x13, x27, x13
+    0.20 :   1a2c:   str     x13, [x5, x26, lsl #3]
+    0.04 :   1a30:   ldr     x13, [x5, x24, lsl #3]
+    8.20 :   1a34:   bic     x12, x13, x12
+    0.19 :   1a38:   str     x12, [x5, x24, lsl #3]
+    0.18 :   1a3c:   ldr     x12, [x5, x15, lsl #3]
+    9.64 :   1a40:   bic     x12, x12, x14
+    1.32 :   1a44:   str     x12, [x5, x15, lsl #3]
+    0.09 :   1a48:   cmp     x1, x0
+    0.10 :   1a4c:   b.hi    19e8
+
+--------------------------------------------------------------------------------
+# With write of primes to 10e11:
+Primes to: 100'000'000'000                                                                                                
+Output file (empty no write): primes_100G.txt                                                                          
+############################################################                                                           
+sieve size: 49999999999 bits (6250000000 bytes)                                                                        
+Sieve initialized in 1.16812 secs                                                                                      
+Primes sieved in 15.1646 secs.                                                                                         
+Found 4118054813 primes in 0.496575 secs (bandwidth 12586.2 MB/s).                                                     
+Primes written to 'primes_100G.txt' file in 341.658 secs.
+--------------------------------------------------------------------------------
+
+# cpudist-bpf 10 1
+Tracing on-CPU time... Hit Ctrl-C to end.
+
+     usecs               : count     distribution
+         0 -> 1          : 3        |                                        |
+         2 -> 3          : 13       |                                        |
+         4 -> 7          : 186      |                                        |
+         8 -> 15         : 483      |**                                      |
+        16 -> 31         : 206      |                                        |
+        32 -> 63         : 171      |                                        |
+        64 -> 127        : 193      |                                        |
+       128 -> 255        : 183      |                                        |
+       256 -> 511        : 184      |                                        |
+       512 -> 1023       : 311      |*                                       |
+      1024 -> 2047       : 8526     |****************************************|
+      2048 -> 4095       : 47       |                                        |
+      4096 -> 8191       : 63       |                                        |
+      8192 -> 16383      : 19       |                                        |
+     16384 -> 32767      : 11       |                                        |
+     32768 -> 65535      : 10       |                                        |
+     65536 -> 131071     : 24       |                                        |
+    131072 -> 262143     : 48       |                                        |
+    262144 -> 524287     : 23       |                                        |
+    524288 -> 1048575    : 6        |                                        |
+
+# runqlat-bpf 10 1
+Tracing run queue latency... Hit Ctrl-C to end.
+
+     usecs               : count     distribution
+         0 -> 1          : 43       |**********                              |
+         2 -> 3          : 48       |***********                             |
+         4 -> 7          : 161      |****************************************|
+         8 -> 15         : 160      |*************************************** |
+        16 -> 31         : 64       |***************                         |
+        32 -> 63         : 58       |**************                          |
+        64 -> 127        : 41       |**********                              |
+       128 -> 255        : 13       |***                                     |
+       256 -> 511        : 5        |*                                       |
+       512 -> 1023       : 4        |                                        |
+      1024 -> 2047       : 3        |                                        |
+      2048 -> 4095       : 9        |**                                      |
+      4096 -> 8191       : 4        |                                        |
+
+# runqlen-bpf 10 1
+Sampling run queue length... Hit Ctrl-C to end.
+
+     runqlen       : count     distribution
+        0          : 3949     |****************************************|
+        1          : 10       |                                        |
+        2          : 1        |                                        |
