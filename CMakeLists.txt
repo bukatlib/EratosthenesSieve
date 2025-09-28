@@ -56,12 +56,14 @@ include_directories ("${PROJECT_BINARY_DIR}")
 
 add_executable (prime_sieve_bench prime_sieve_bench.cpp eratosthenes_sieve.cpp cpu_info.cpp)
 add_executable (show_cpu_caches show_cpu_caches.cpp cpu_info.cpp)
+add_executable (factorization_wheel_demo factorization_wheel_demo.cpp)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if (PGO_STAGE STREQUAL "Collect")
         target_link_libraries(prime_sieve_bench -lgcov)
         target_link_libraries(show_cpu_caches -lgcov)
-        add_custom_target(profile ./prime_sieve_bench 10000000000 - COMMAND ./show_cpu_caches DEPENDS prime_sieve_bench show_cpu_caches)
+        target_link_libraries(factorization_wheel_demo -lgcov)
+        add_custom_target(profile ./prime_sieve_bench 10000000000 - COMMAND ./show_cpu_caches COMMAND ./factorization_wheel_demo DEPENDS prime_sieve_bench show_cpu_caches factorization_wheel_demo)
     endif ()
 endif()
 
