@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <bit>
 #include <map>
 #include <iterator>
 #include <iomanip>
@@ -54,7 +55,7 @@ int main() {
 
         auto filter = [=](const candidate& c) { return (c.number <= 1020) && (c.bit_idx == bit_idx); };
         copy_if(candidates.cbegin(), candidates.cend(), back_inserter(modulo_candidates), filter);
-        
+
         cout<<setw(3)<<modulo<<":";
         for (const candidate& modulo_candidate: modulo_candidates)
             cout<<setw(5)<<modulo_candidate.number;
@@ -81,7 +82,6 @@ int main() {
         }
     }
 
-    
     for (uint64_t p: {7, 11, 13})   {
         map<uint64_t, uint64_t> sieve_masks;
         for (const candidate& c: candidates)    {
@@ -101,13 +101,17 @@ int main() {
             }
         }
 
+        uint64_t one_count = 0ul;
         cout<<endl<<"SIEVING MASKS FOR "<<p<<" PRIME"<<endl;
         for (auto it = sieve_masks.cbegin(); it != sieve_masks.cend(); ++it)  {
             cout<<hex<<" "<<it->second<<dec;
-            if (((it->first + 1) % p) == 0)
+            one_count += popcount(it->second);
+            if (((it->first + 1) % p) == 0) {
                 cout<<endl;
+            }
         }
+        cout<<"... "<<(3 * p * 64 - one_count)<<" zeros of "<<3 * p * 64<<" total."<<endl;
     }
-    
+
     return 0;
 }
