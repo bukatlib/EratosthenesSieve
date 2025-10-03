@@ -1,6 +1,7 @@
 #ifndef HLIDAC_PES_ERASTHOTHENES_SIEVE_H
 #define HLIDAC_PES_ERASTHOTHENES_SIEVE_H
 
+#include <array>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -60,6 +61,12 @@ class Eratosthenes {
         // Max number of uin64_t masks per small prime in the seeding vector.
         static constexpr uint64_t MAX_MASKS_PER_PRIME = 128;
         static_assert(MAX_MASKS_PER_PRIME >= 61, "At least 61 masks are required for the biggest seeding prime.");
+
+        // List of numbers coprime to wheel 2x3x5 (basis).
+        alignas(64) static const std::array<uint64_t, 8> wheel;
+
+        // Mapping from a modulo 2x3x5 to the wheel index (-1 if not in the wheel).
+        alignas(32) static const std::array<int8_t, 30> modulo_to_idx;
 
         // Exact number of bits required, allocated memory in bytes (rounded to 8-byte multiple). and the sieve vector.
         uint64_t sieve_bits;

@@ -446,3 +446,34 @@ vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime_bit_idx, uint64_t 
     return masks;
 }
 
+constexpr array<uint64_t, 8> compute_wheel_2_3_5()    {
+    uint64_t wheel_idx = 0ul;
+    array<uint64_t, 8ul> wheel = { };
+    constexpr uint64_t wheel_size = 2ul * 3ul * 5ul;
+    for (uint64_t n = 0ul; n < wheel_size; ++n)   {
+        bool div_by_2 = (n % 2ul) == 0ul;
+        bool div_by_3 = (n % 3ul) == 0ul;
+        bool div_by_5 = (n % 5ul) == 0ul;
+        bool div_by_2_3_5 = div_by_2 || div_by_3 || div_by_5;
+        if (!div_by_2_3_5)
+            wheel[wheel_idx++] = n;
+    }
+
+    return wheel;
+}
+
+constexpr array<int8_t, 30> compute_modulo_to_wheel_idx()   {
+    constexpr uint64_t wheel_size = 2ul * 3ul * 5ul;
+    array<int8_t, wheel_size> mod_to_idx = { };
+    for (uint64_t n = 0; n < wheel_size; ++n)
+        mod_to_idx[n] = -1;
+
+    constexpr array<uint64_t, 8> wheel = compute_wheel_2_3_5();
+    for (uint64_t r = 0; r < wheel.size(); ++r)
+        mod_to_idx[wheel[r]] = r;
+
+    return mod_to_idx;
+}
+
+const array<uint64_t, 8> Eratosthenes::wheel = compute_wheel_2_3_5();
+const array<int8_t, 30> Eratosthenes::modulo_to_idx = compute_modulo_to_wheel_idx();
