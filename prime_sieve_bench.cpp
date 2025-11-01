@@ -70,7 +70,9 @@ int main(int argc, char* argv[])  {
     time_point<system_clock, duration<double>> tp1 = high_resolution_clock::now();
 
     Eratosthenes sieve(to_value);
-    cout<<"sieve size: "<<sieve.bit_size()<<" bits ("<<sieve.bytes_allocated()<<" bytes)"<<endl;
+    uint64_t bit_size = sieve.bit_size(), byte_size = sieve.bytes_allocated();
+    double mbyte_size = byte_size / (1024.0 * 1024.0);
+    cout<<"sieve size: "<<bit_size<<" bits ("<<byte_size<<" bytes, "<<mbyte_size<<" MBs)"<<endl;
 
     time_point<system_clock, duration<double>> tp2 = high_resolution_clock::now();
     double init_time = duration_cast<duration<double>>(tp2 - tp1).count();

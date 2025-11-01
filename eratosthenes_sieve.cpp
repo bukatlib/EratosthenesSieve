@@ -8,8 +8,25 @@
 #include "cpu_info.h"
 #include "eratosthenes_sieve.h"
 
+// TODO: remove
+#include <iomanip>
+
 using namespace std;
 using namespace std::chrono;
+
+#pragma pack(1)
+struct test_bitfield {
+    uint64_t step_idx : 3;
+    uint64_t bit_idx: 53;   // Will work up to 1000 TB of RAM
+    uint32_t step0: 25;     // Will work up to 620 GB of RAM, or primes up to 20 * 10^12
+    uint32_t step1: 25;
+    uint32_t step2: 25;
+    uint32_t step3: 25;
+    uint32_t step4: 25;
+    uint32_t step5: 25;
+    uint32_t step6: 25;
+    uint32_t step7: 25;
+};
 
 Eratosthenes::Eratosthenes(uint64_t primes_to) : 
     sieve_bits(sieve_size_bits(primes_to)), sieve_bytes_alloc(sieve_size_bytes_alloc(sieve_bits)),
@@ -27,6 +44,12 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
     if (last_uint64_valid_bits > 0) {
         uint64_t reset_mask = (1ul << last_uint64_valid_bits) - 1ul;
         sieve[sieve_bits>>UINT64_IDX_SHIFT] &= reset_mask;
+    }
+
+    // Clear number '1' in the sieve image as it is not a prime.
+    if (sieve_size > 0ul)   {
+        constexpr uint64_t number_1_clear_mask = UINT64_ONE_MASK - 1ul;
+        sieve[0] &= number_1_clear_mask;
     }
 
     CpuInfo cpuinfo;
@@ -56,9 +79,27 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
     segment_size *= BITS_PER_BYTE;
 
     // Prime squared index is up to 1859 for masks, avoid reseting the previous bits.
-    assert(segment_size >= 2048ul);
+    // TODO: update
+    //assert(segment_size >= 2048ul);
+    //segment_size = 1024ul;
+    // segment_size = 384*1024ul;
     // Segment size should be a multiple of uint64_t size!
     assert(segment_size % UINT64_BITS == 0);
+}
+
+uint64_t test(uint64_t sieve_bits) {
+    test_bitfield tf;
+    tf.step_idx = (sieve_bits & 0x1ul) + 1u;
+    tf.bit_idx = sieve_bits;
+    tf.step0 = sieve_bits>>0; 
+    tf.step1 = sieve_bits>>1; 
+    tf.step2 = sieve_bits>>2; 
+    tf.step3 = sieve_bits>>3; 
+    tf.step4 = sieve_bits>>4; 
+    tf.step5 = sieve_bits>>5; 
+    tf.step6 = sieve_bits>>6; 
+    tf.step7 = sieve_bits>>7; 
+    return tf.step_idx * tf.bit_idx + tf.step0 + tf.step1 + tf.step2 + tf.step3 + tf.step4 + tf.step5 + tf.step6 + tf.step7;
 }
 
 Eratosthenes::~Eratosthenes()	{
@@ -102,31 +143,42 @@ void Eratosthenes::sieve_primes()    {
 
         assert(prime_bit_idx < segment_end);
 
-        uint64_t prime_squared_idx = prime_idx_squared(prime_bit_idx);
-        uint64_t bit_idx = prime_squared_idx;
-        uint64_t sieve_step = step(prime_bit_idx);
-
-        if (prime_squared_idx < sieve_bits) {
-            // Start from the square of the prime (lower had to be already seeded).
-            while (bit_idx < segment_end)   {
-                reset_bit(bit_idx);
-                bit_idx += sieve_step;
-            }
-        } else {
-            // Seed only with the primes up to the root square of n.
+        // The newly found prime in the sieve image.
+        // Seed only with the primes up to the root square of n.
+        uint64_t prime = sieve_bit_to_number(prime_bit_idx);
+        if (prime * prime > primes_to)  {
             break;
         }
 
-        if (sieve_step < UINT64_BITS && bit_idx < sieve_bits)   {
-            assert(prime_squared_idx < segment_size);
-            primes_meta.push_back({sieve_step, 0ul, seeding_pattern(prime_bit_idx, bit_idx, sieve_step)});
+        // Sieve multiples of the prime, primes larger or equal to prime^2 are considered.
+        array<uint64_t, 8> wheel_modulo_idxs = Eratosthenes::wheel_modulo_init_idxs(prime);
+        for (uint64_t start_bit_idx: wheel_modulo_idxs) {
+            uint64_t bit_idx = start_bit_idx;
+            while (bit_idx < segment_end)   {
+                reset_bit(bit_idx);
+                bit_idx += 8ul * prime;
+            }
+        }
+
+        if (prime <= min(MAX_SMALL_PRIME, UINT64_BITS))   {
+            primes_meta.push_back({prime, wheel_modulo_idxs, seeding_pattern(prime)});
             ++patterns;
         } else {
-            primes_meta.push_back({sieve_step, bit_idx, {}});
+            primes_meta.push_back({prime, wheel_modulo_idxs, {}});
         }
         
         prime_bit_idx++;
     }
+
+    /*
+    uint64_t total_size = 0ul;
+    for (const prime_seed_metainfo& meta: primes_meta)
+        total_size += 8ul * meta.reset_masks.size();
+    cout<<"Total patterns: "<<patterns<<" ("<<total_size<<" bytes)"<<endl;
+    */
+    uint64_t val = test(sieve_bits);
+    cout<<"val: "<<val<<endl;
+    return;
 
     uint64_t chunk_size = WORKCHUNK_SEGMENTS * segment_size;
     uint64_t chunk_last_idx = segment_end + chunk_size * ((sieve_bits - segment_end) / chunk_size);
@@ -148,7 +200,7 @@ void Eratosthenes::sieve_primes()    {
 }
 
 uint64_t Eratosthenes::prime_count()  {
-    if (sieve_size > 0ul)  {
+    if (primes_to >= 7ul)  {
         uint64_t size_aligned = sieve_size & 0xffffffff'fffffffc;
         uint64_t thread_count = Eratosthenes::init_pop_thread_count();
         uint64_t count0 = 0ul, count1 = 0ul, count2 = 0ul, count3 = 0ul, count4 = 0ul;
@@ -164,9 +216,16 @@ uint64_t Eratosthenes::prime_count()  {
         for (uint64_t uint64_idx = size_aligned; uint64_idx < sieve_size; ++uint64_idx)
             count4 += popcount(sieve[uint64_idx]);
 
-        // Add one for prime 2.
-        found_primes = 1ul + count0 + count1 + count2 + count3 + count4;
-    } else if (primes_to == 2)  {
+        // Add three for primes 2, 3, and 5.
+        found_primes = 3ul + count0 + count1 + count2 + count3 + count4;
+    } else if (primes_to >= 5ul) {
+        // Primes 2, 3, 5 but not 7 and greater.
+        found_primes = 3ul;
+    } else if (primes_to >= 3ul) {
+        // Primes 2, 3 but not 5 and greater.
+        found_primes = 2ul;
+    } else if (primes_to >= 2ul) {
+        // Prime 2 but not 3 and greater.
         found_primes = 1ul;
     } else {
         found_primes = 0ul;
@@ -180,11 +239,15 @@ vector<uint64_t> Eratosthenes::primes() const {
     primes.reserve(found_primes);
     if (primes_to >= 2ul)
         primes.push_back(2ul);
+    if (primes_to >= 3ul)
+        primes.push_back(3ul);
+    if (primes_to >= 5ul)
+        primes.push_back(5ul);
     
     if (sieve_size > 0ul)  {
         uint64_t prime_bit_idx = 0;
         while ((prime_bit_idx = find_next_set_bit(prime_bit_idx)) < sieve_bits) {
-            primes.push_back(prime(prime_bit_idx));
+            primes.push_back(sieve_bit_to_number(prime_bit_idx));
             ++prime_bit_idx;
         }
     }
@@ -207,12 +270,16 @@ void Eratosthenes::write_primes_to_file(const string& filename) const {
 
     if (primes_to >= 2ul)
         OUT<<2<<"\n";
+    if (primes_to >= 3ul)
+        OUT<<3<<"\n";
+    if (primes_to >= 5ul)
+        OUT<<5<<"\n";
 
     if (sieve_size > 0ul)  {
         array<uint64_t, 4> prime_buffer;
         uint64_t buffer_idx = 0ul, prime_bit_idx = 0ul;
         while ((prime_bit_idx = find_next_set_bit(prime_bit_idx)) < sieve_bits) {
-            uint64_t prime_val = prime(prime_bit_idx);
+            uint64_t prime_val = sieve_bit_to_number(prime_bit_idx);
 
             if (buffer_idx == prime_buffer.size())   {
                 buffer_idx = 0ul;
@@ -305,27 +372,80 @@ tuple<uint64_t, uint64_t> Eratosthenes::index_reset_mask(uint64_t bit_idx)   {
     return {bit_idx >> UINT64_IDX_SHIFT, rotl(0xffff'ffff'ffff'fffe, UINT64_BIT_MASK & bit_idx)};
 }
 
-uint64_t Eratosthenes::step(uint64_t prime_bit_idx)  {
-    // Calculate the seeding step for the prime.
-    return 2ul * prime_bit_idx + 3ul;
+uint64_t Eratosthenes::sieve_bit_to_number(uint64_t bit_idx)   {
+    // Calculate the wheel 2x3x5 index in the sieve and the modulo.
+    constexpr uint64_t basis_size = 8ul;
+    constexpr uint64_t wheel_circumference = 30ul;
+    uint64_t wheel_count = bit_idx / basis_size;
+    uint64_t wheel_bit_idx = bit_idx - basis_size * wheel_count;
+    uint64_t number = wheel_circumference * wheel_count + wheel[wheel_bit_idx];
+    return number;
 }
 
-uint64_t Eratosthenes::prime_idx_squared(uint64_t prime_bit_idx)   {
-    // If prime_bit_idx points to a prime, then the return idx points to the power of the prime.
-    return 2 * prime_bit_idx * prime_bit_idx + 6 * prime_bit_idx + 3;
+bool Eratosthenes::is_in_image(uint64_t number, uint64_t* bit_idx) {
+    if ((number & 0x1) == 0ul)  {
+        // Divisible by 2 -> not in the sieve image.
+        return false;
+    } else {
+        constexpr uint64_t wheel_circumference = 30ul;
+        uint64_t wheel_count = number / wheel_circumference;
+        uint64_t modulo = number - wheel_circumference * wheel_count;
+        int8_t wheel_bit_idx = Eratosthenes::modulo_to_idx[modulo];
+        if (wheel_bit_idx >= 0)   {
+            // Not divisible by 2, 3, or 5 -> in the sieve binary image.
+            if (bit_idx != nullptr)
+                *bit_idx = 8ul * wheel_count + wheel_bit_idx;
+            return true;
+        } else {
+            // Divisible by 3 or 5 -> not in the sieve image.
+            return false;
+        }
+    }
 }
 
-uint64_t Eratosthenes::prime(uint64_t prime_bit_idx)   {
-    // Calculate the prime that corresponds to the bit index, the same as step value.
-    return 2ul * prime_bit_idx + 3ul;
+array<uint64_t, 8> Eratosthenes::wheel_modulo_init_idxs(uint64_t prime)   {
+    // Start from the square of the found prime.
+    uint64_t current_number = prime * prime;
+
+    array<bool, 8> modulo_idx_found = { };
+    array<uint64_t, 8> wheel_modulo_idxs = { };
+
+    do {
+        uint64_t bit_idx = 0ul;
+        if (Eratosthenes::is_in_image(current_number, &bit_idx))    {
+            uint64_t byte_bit_idx = bit_idx & 0x7;
+            assert(modulo_idx_found[byte_bit_idx] == false);
+            wheel_modulo_idxs[byte_bit_idx] = bit_idx;
+            modulo_idx_found[byte_bit_idx] = true;
+        }
+
+        current_number += prime;
+    } while (find(modulo_idx_found.cbegin(), modulo_idx_found.cend(), false) != modulo_idx_found.cend());
+
+    array<uint64_t, 8> bit_steps = { };
+    uint64_t min_bit = *min_element(wheel_modulo_idxs.cbegin(), wheel_modulo_idxs.cend());
+    for (uint64_t i = 0; i < 8ul; ++i)
+        bit_steps[i] = wheel_modulo_idxs[i] - min_bit;
+
+    cout<<"prime "<<prime<<": "<<*max_element(bit_steps.cbegin(), bit_steps.cend())<<endl;
+
+    return wheel_modulo_idxs;
 }
 
 uint64_t Eratosthenes::sieve_size_bits(uint64_t primes_to)  {
-    // Only odd numbers are in the sieve from 3 upwards.
-    if (primes_to >= 3)
-        return ((primes_to - 3) >> 1) + 1;
-    else
-        return 0;
+    // Count the number of bits needed for the whole wheels first.
+    constexpr uint64_t wheel_bits = 8ul;
+    constexpr uint64_t wheel_circumference = 30ul;
+    uint64_t wheel_count = primes_to / wheel_circumference;
+    uint64_t bitcount_whole_wheels = wheel_bits * wheel_count;
+
+    // Define the modulo to determine the number of required bits for the partial (last) wheel.
+    uint64_t bitcount_total = bitcount_whole_wheels, idx = 0ul;
+    uint64_t modulo_circumference = primes_to - wheel_circumference * wheel_count;
+    while (idx < Eratosthenes::wheel.size() && modulo_circumference >= Eratosthenes::wheel[idx++])
+        bitcount_total++;
+
+    return bitcount_total;
 }
 
 uint64_t Eratosthenes::sieve_size_bytes_alloc(uint64_t sieve_bits)  {
@@ -336,26 +456,41 @@ uint64_t Eratosthenes::sieve_size_bytes_alloc(uint64_t sieve_bits)  {
 void Eratosthenes::seed_bit_range(const vector<prime_seed_metainfo>& primes_meta,
                     uint64_t num_of_patterns, uint64_t start_bit, uint64_t end_bit)    {
 
-    vector<uint64_t> next_idx(primes_meta.size(), 0ul);
+    vector<uint64_t> pattern_idxs(num_of_patterns, 0ul);
 
     for (uint64_t i = 0ul; i < num_of_patterns; ++i)  {
         assert(start_bit >= segment_size);
         uint64_t mask_count = primes_meta[i].reset_masks.size();
         assert(mask_count > 0ul);
-        uint64_t pattern_idx = ((start_bit - segment_size) / UINT64_BITS) % mask_count;
-        next_idx[i] = pattern_idx;
+        assert((start_bit & UINT64_BIT_MASK) == 0ul);
+        uint64_t pattern_idx = (start_bit / UINT64_BITS) % mask_count;
+        pattern_idxs[i] = pattern_idx;
     }
 
-    bool terminate = false;
+    vector<uint64_t> large_prime_idxs;
+    vector<uint32_t> large_prime_steps;
     uint64_t prime_idx = num_of_patterns;
+    assert(num_of_patterns <= primes_meta.size());
+    uint64_t number_of_large_primes = primes_meta.size() - num_of_patterns;
+    large_prime_idxs.reserve(8ul*number_of_large_primes);
 
-    while (prime_idx < primes_meta.size() && !terminate)    {
-        uint64_t init_bit_idx = primes_meta[prime_idx].next_idx;
-        uint64_t sieve_step = primes_meta[prime_idx].sieve_step;
-        uint64_t min_prime_bit = max(start_bit, init_bit_idx);
-        uint64_t cur_bit_idx = init_bit_idx + ((min_prime_bit - init_bit_idx + sieve_step - 1ul) / sieve_step) * sieve_step;
-        next_idx[prime_idx] = cur_bit_idx;
-        terminate = init_bit_idx >= end_bit;
+    while (prime_idx < primes_meta.size())    {
+        uint64_t sieve_step_in_bits = 8ul * primes_meta[prime_idx].prime;
+        const array<uint64_t, 8ul>& modulo_init_idxs = primes_meta[prime_idx].modulo_init_idxs;
+
+        for (uint64_t i = 0ul; i < modulo_init_idxs.size(); ++i)    {
+            uint64_t init_modulo_bit = modulo_init_idxs[i];
+            uint64_t start_bit_modulo = max(start_bit, init_modulo_bit);
+            uint64_t step_mult = (start_bit_modulo - init_modulo_bit + sieve_step_in_bits - 1ul) / sieve_step_in_bits;
+            uint64_t cur_modulo_idx = init_modulo_bit + step_mult * sieve_step_in_bits;
+            assert((cur_modulo_idx - init_modulo_bit) % sieve_step_in_bits == 0ul);
+            assert((sieve_bit_to_number(cur_modulo_idx) % primes_meta[prime_idx].prime) == 0ul);
+            if (cur_modulo_idx < end_bit)   {
+                large_prime_idxs.push_back(cur_modulo_idx);
+                large_prime_steps.push_back(static_cast<uint32_t>(sieve_step_in_bits));
+            }
+        }
+
         ++prime_idx;
     }
 
@@ -368,10 +503,10 @@ void Eratosthenes::seed_bit_range(const vector<prime_seed_metainfo>& primes_meta
             uint64_t pattern_chunks = pattern.size();
             uint64_t segment_bits = segment_end - segment_start;
             uint64_t partial_bits = segment_bits & UINT64_BIT_MASK;
-            uint64_t sieve_idx = (segment_start >> UINT64_IDX_SHIFT), pattern_idx = next_idx[i];
-            uint64_t pattern_writes = (segment_bits >> UINT64_IDX_SHIFT) + (partial_bits == 0ul ? 0ul : 1ul) ;
-
+            uint64_t sieve_idx = (segment_start >> UINT64_IDX_SHIFT), pattern_idx = pattern_idxs[i];
+            uint64_t pattern_writes = (segment_bits >> UINT64_IDX_SHIFT) + (partial_bits == 0ul ? 0ul : 1ul);
             uint64_t partial_pattern_count = min(pattern_writes, pattern_chunks - pattern_idx);
+
             for (uint64_t i = 0; i < partial_pattern_count; ++i)
                 sieve[sieve_idx++] &= pattern[pattern_idx + i];
             pattern_writes -= partial_pattern_count;
@@ -385,72 +520,91 @@ void Eratosthenes::seed_bit_range(const vector<prime_seed_metainfo>& primes_meta
             for (uint64_t i = 0; i < pattern_writes; ++i)
                 sieve[sieve_idx++] &= pattern[i];
 
-            next_idx[i] = pattern_writes;
+            if (pattern_idx + partial_pattern_count >= pattern_chunks)  {
+                pattern_idxs[i] = pattern_writes;
+            } else {
+                pattern_idxs[i] = pattern_idx + partial_pattern_count;
+            }
         }
 
         // Reset idividual bits for large primes.
-        for (uint64_t i = num_of_patterns; i < prime_idx; ++i) {
-            uint64_t one_step = primes_meta[i].sieve_step;
-            uint64_t two_steps = one_step << 1ul, four_steps = one_step << 2ul;
-            uint64_t three_steps = two_steps + one_step;
-            assert(segment_end >= four_steps);  // only 3^2 is less than 4*3 should not happen
-
-            uint64_t bit_idx = next_idx[i], unroll_max_idx = segment_end - four_steps;
-
-            while (bit_idx < unroll_max_idx)    {
-                reset_bit(bit_idx);
-                reset_bit(bit_idx + one_step);
-                reset_bit(bit_idx + two_steps);
-                reset_bit(bit_idx + three_steps);
-                bit_idx += four_steps;
-            }
+        for (uint64_t i = 0; i < large_prime_idxs.size(); ++i)   {
+            uint64_t bit_idx = large_prime_idxs[i];
+            uint64_t one_step = large_prime_steps[i];
 
             while (bit_idx < segment_end)  {
                 reset_bit(bit_idx);
                 bit_idx += one_step;
             }
 
-            next_idx[i] = bit_idx;
+            large_prime_idxs[i] = bit_idx;
         }
     }
 }
 
-vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime_bit_idx, uint64_t last_bit_idx, uint64_t sieve_step) {
-    // Calculate a seeding pattern for a small prime number.
-    vector<uint64_t> masks;
-    uint64_t prime_number = prime(prime_bit_idx);
-    uint64_t repeats = MAX_MASKS_PER_PRIME / prime_number;
-    assert(repeats >= 1ul);
-    masks.reserve(prime_number*repeats);
+vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime) {
+    // Calculate seeding patterns for small prime numbers.
+    vector<uint64_t> cycle_masks;
+    cycle_masks.reserve(prime);
 
-    uint64_t cycle = 0ul;
-    uint64_t reset_mask = UINT64_ONE_MASK;
-    uint64_t init_idx = last_bit_idx & UINT64_BIT_MASK, cur_idx = init_idx;
+    uint64_t mask = UINT64_ONE_MASK;
+    uint64_t pattern_idx = 0ul, current_number = prime;
 
-    do {
-        reset_mask &= get<1>(index_reset_mask(cur_idx));
-        cur_idx = cur_idx + sieve_step;
+    while (cycle_masks.size() < prime)    {
+        uint64_t bit_idx = 0ul;
+        if (is_in_image(current_number, &bit_idx))   {
+            auto [uint64_idx, reset_bit_mask] = index_reset_mask(bit_idx);
+            assert((sieve_bit_to_number(bit_idx) % prime) == 0ul);
 
-        if (cur_idx >= UINT64_BITS)    {
-            masks.push_back(reset_mask);
-            reset_mask = UINT64_ONE_MASK;
-            cur_idx &= UINT64_BIT_MASK;
+            if (uint64_idx > pattern_idx)    {
+                // We allow the holes up to one uint64_t.
+                assert(uint64_idx - pattern_idx <= 2);  // No bigger holes in pattern allowed.
+
+                cycle_masks.push_back(mask);
+                if (pattern_idx + 1 < uint64_idx)   {
+                    cycle_masks.push_back(UINT64_ONE_MASK);
+                    ++pattern_idx;
+                }
+
+                mask = UINT64_ONE_MASK;
+                ++pattern_idx;
+            }
+
+            mask &= reset_bit_mask;
         }
 
-        if (cur_idx == init_idx)
-            ++cycle;
-    } while (cycle < repeats);
+        current_number += prime;
+    }
 
-    assert(masks.size() == prime_number * repeats);
+    vector<uint64_t> masks;
+    uint64_t repeats = MAX_MASKS_PER_PRIME / prime;
+    assert(repeats >= 1ul);
+    masks.reserve(prime * repeats);
+
+    //cout<<"prime "<<prime<<" with "<<repeats<<" (total "<<repeats * prime<<")"<<endl;
+
+    for (uint64_t n = 0; n < repeats; ++n)  {
+        for (uint64_t mask: cycle_masks)
+            masks.push_back(mask);
+    }
+
+    /*
+    cout<<"masks:";
+    for (uint64_t idx = 0; idx < masks.size(); ++idx)   {
+        if ((idx % prime) == 0ul)
+            cout<<endl;
+        cout<<" "<<hex<<masks[idx];
+    }
+    cout<<dec<<endl;
+    */
 
     return masks;
 }
 
-constexpr array<uint64_t, 8> compute_wheel_2_3_5()    {
+constexpr array<uint64_t, Eratosthenes::WHEEL_NUMBER_OF_COPRIMES> Eratosthenes::compute_wheel_2_3_5()    {
     uint64_t wheel_idx = 0ul;
-    array<uint64_t, 8ul> wheel = { };
-    constexpr uint64_t wheel_size = 2ul * 3ul * 5ul;
-    for (uint64_t n = 0ul; n < wheel_size; ++n)   {
+    array<uint64_t, WHEEL_NUMBER_OF_COPRIMES> wheel = { };
+    for (uint64_t n = 0ul; n < WHEEL_CIRCUMFERENCE; ++n)   {
         bool div_by_2 = (n % 2ul) == 0ul;
         bool div_by_3 = (n % 3ul) == 0ul;
         bool div_by_5 = (n % 5ul) == 0ul;
@@ -462,18 +616,17 @@ constexpr array<uint64_t, 8> compute_wheel_2_3_5()    {
     return wheel;
 }
 
-constexpr array<int8_t, 30> compute_modulo_to_wheel_idx()   {
-    constexpr uint64_t wheel_size = 2ul * 3ul * 5ul;
-    array<int8_t, wheel_size> mod_to_idx = { };
-    for (uint64_t n = 0; n < wheel_size; ++n)
+constexpr array<int8_t, Eratosthenes::WHEEL_CIRCUMFERENCE> Eratosthenes::compute_modulo_to_wheel_idx()   {
+    array<int8_t, WHEEL_CIRCUMFERENCE> mod_to_idx = { };
+    for (uint64_t n = 0; n < WHEEL_CIRCUMFERENCE; ++n)
         mod_to_idx[n] = -1;
 
-    constexpr array<uint64_t, 8> wheel = compute_wheel_2_3_5();
+    constexpr auto wheel = compute_wheel_2_3_5();
     for (uint64_t r = 0; r < wheel.size(); ++r)
         mod_to_idx[wheel[r]] = r;
 
     return mod_to_idx;
 }
 
-const array<uint64_t, 8> Eratosthenes::wheel = compute_wheel_2_3_5();
-const array<int8_t, 30> Eratosthenes::modulo_to_idx = compute_modulo_to_wheel_idx();
+const array<uint64_t, Eratosthenes::WHEEL_NUMBER_OF_COPRIMES> Eratosthenes::wheel = Eratosthenes::compute_wheel_2_3_5();
+const array<int8_t, Eratosthenes::WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = Eratosthenes::compute_modulo_to_wheel_idx();
