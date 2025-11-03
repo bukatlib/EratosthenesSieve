@@ -23,8 +23,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clan
     # Setup the target optimization with the exception of ARMv8.
     if (NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
         add_compile_options(-march=native)
-    else ()
-        add_compile_options(-mcpu=cortex-a55)
     endif ()
 
     # More warnings desired.

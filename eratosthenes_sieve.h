@@ -63,13 +63,30 @@ class Eratosthenes {
         static std::tuple<uint64_t, uint64_t> index_mask(uint64_t bit_idx);
         static std::tuple<uint64_t, uint64_t> index_reset_mask(uint64_t bit_idx);
         static uint64_t sieve_bit_to_number(uint64_t bit_idx);
-
         static bool is_in_image(uint64_t number, uint64_t* bit_idx = nullptr);
-        static std::array<uint64_t, 8> wheel_modulo_init_idxs(uint64_t prime);
+
+        #pragma pack(1)
+        struct prime_wheel_steps {
+            uint64_t step_idx : 3;  // Eight steps for 2x3x5 wheel.
+            uint64_t bit_idx: 53;   // Will work up to 1000 TB of RAM
+            uint32_t step0: 25;     // Will work up to 620 GB of RAM, or primes up to 20 * 10^12
+            uint32_t step1: 25;
+            uint32_t step2: 25;
+            uint32_t step3: 25;
+            uint32_t step4: 25;
+            uint32_t step5: 25;
+            uint32_t step6: 25;
+            uint32_t step7: 25;
+        };
+
+        static prime_wheel_steps wheel_steps(uint64_t prime);
 
         static uint64_t sieve_size_bits(uint64_t primes_to);
         static uint64_t sieve_size_bytes_alloc(uint64_t sieve_bits);
         static uint64_t init_pop_thread_count();
+
+        using prime_bit_masks = std::vector<std::vector<uint64_t>>;
+        using prime_wheel_data = std::vector<prime_wheel_steps>;
 
         struct prime_seed_metainfo {
             uint64_t prime;
@@ -77,8 +94,8 @@ class Eratosthenes {
             std::vector<uint64_t> reset_masks;
         };
 
-        void seed_bit_range(const std::vector<prime_seed_metainfo>& primes_meta,
-            uint64_t num_of_patterns, uint64_t start_bit, uint64_t end_bit);
+        void seed_bit_range(const prime_bit_masks& masks, const prime_wheel_data& wheel_data, uint64_t start_bit, uint64_t end_bit);
+        void seed_bit_range(prime_wheel_steps& prime_steps, uint64_t end_bit);
         static std::vector<uint64_t> seeding_pattern(uint64_t prime);
 
         // Exact number of bits required, allocated memory in bytes (rounded to 8-byte multiple). and the sieve vector.
@@ -95,7 +112,8 @@ class Eratosthenes {
 
         // Segment size, L1 data cache on ARM64, L2 data cache per hw thread on AMD64.
         uint64_t segment_size;
-        static constexpr uint64_t WORKCHUNK_SEGMENTS = 16ul;
+        //static constexpr uint64_t WORKCHUNK_SEGMENTS = 16ul;
+        static constexpr uint64_t WORKCHUNK_SEGMENTS = 28ul;
 };
 
 #endif
