@@ -40,7 +40,7 @@ class Eratosthenes {
 
         // The maximal small prime number for vectorized masking (43, 47, 53, 59, 61 contain zero holes in the pattern).
         // up to 41: 9488 bytes; up to 61: 13696 bytes
-        static constexpr uint64_t MAX_SMALL_PRIME = 41ul;
+        static constexpr uint64_t MAX_SMALL_PRIME = 61ul;
 
         // Wheel 2x3x5 (basis) helper constants, computation functions, read-only wheel data.
         static constexpr uint64_t WHEEL_NUMBER_OF_COPRIMES = 8ul;
@@ -95,7 +95,8 @@ class Eratosthenes {
         };
 
         void seed_bit_range(const prime_bit_masks& masks, const prime_wheel_data& wheel_data, uint64_t start_bit, uint64_t end_bit);
-        void seed_bit_range(prime_wheel_steps& prime_steps, uint64_t end_bit);
+        void seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit);
+        void seed_bit_range_large(prime_wheel_steps& prime_steps, uint64_t end_bit);
         static std::vector<uint64_t> seeding_pattern(uint64_t prime);
 
         // Exact number of bits required, allocated memory in bytes (rounded to 8-byte multiple). and the sieve vector.
