@@ -38,8 +38,8 @@ class Eratosthenes {
         static constexpr uint64_t MAX_MASKS_PER_PRIME = 128ul;
         static_assert(MAX_MASKS_PER_PRIME >= 61ul, "At least 61 masks are required for the biggest seeding prime.");
 
-        // The maximal small prime number for vectorized masking (43, 47, 53, 59, 61 contain zero holes in the pattern).
-        // up to 41: 9488 bytes; up to 61: 13696 bytes
+        // The maximal small prime number used for vectorized zeroing by using bit masking.
+        // up to 41: 9488 bytes; up to 61: 13696 bytes (43, 47, 53, 59, 61 contain zero holes in the pattern)
         static constexpr uint64_t MAX_SMALL_PRIME = 61ul;
 
         // Wheel 2x3x5 (basis) helper constants, computation functions, read-only wheel data.
@@ -56,7 +56,6 @@ class Eratosthenes {
         // Mapping from a modulo 2x3x5 to the wheel index (-1 if not in the wheel).
         alignas(32) static const std::array<int8_t, WHEEL_CIRCUMFERENCE> modulo_to_idx;
 
-
         uint64_t find_next_set_bit(uint64_t start_bit_idx) const;
         void reset_bit(uint64_t bit_idx);
 
@@ -65,6 +64,7 @@ class Eratosthenes {
         static uint64_t sieve_bit_to_number(uint64_t bit_idx);
         static bool is_in_image(uint64_t number, uint64_t* bit_idx = nullptr);
 
+        #pragma pack(push)
         #pragma pack(1)
         struct prime_wheel_steps {
             uint64_t step_idx : 3;  // Eight steps for 2x3x5 wheel.
@@ -78,6 +78,7 @@ class Eratosthenes {
             uint32_t step6: 25;
             uint32_t step7: 25;
         };
+        #pragma pack(pop)
 
         static prime_wheel_steps wheel_steps(uint64_t prime);
 
@@ -87,12 +88,6 @@ class Eratosthenes {
 
         using prime_bit_masks = std::vector<std::vector<uint64_t>>;
         using prime_wheel_data = std::vector<prime_wheel_steps>;
-
-        struct prime_seed_metainfo {
-            uint64_t prime;
-            std::array<uint64_t, 8> modulo_init_idxs;
-            std::vector<uint64_t> reset_masks;
-        };
 
         void seed_bit_range(const prime_bit_masks& masks, const prime_wheel_data& wheel_data, uint64_t start_bit, uint64_t end_bit);
         void seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit);
@@ -113,7 +108,6 @@ class Eratosthenes {
 
         // Segment size, L1 data cache on ARM64, L2 data cache per hw thread on AMD64.
         uint64_t segment_size;
-        //static constexpr uint64_t WORKCHUNK_SEGMENTS = 16ul;
         static constexpr uint64_t WORKCHUNK_SEGMENTS = 28ul;
 };
 
