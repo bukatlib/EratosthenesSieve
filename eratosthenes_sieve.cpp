@@ -261,17 +261,18 @@ void Eratosthenes::write_image(const string& filename) const {
 }
 
 bool Eratosthenes::is_prime(uint64_t prime_candidate) const {
-    if (prime_candidate <= 1ul)  {
-        return false;
-    } else if (prime_candidate == 2ul)  {
+    if (prime_candidate == 2ul || prime_candidate == 3ul || prime_candidate == 5ul)   {
         return true;
-    } else if ((prime_candidate & 0x01) == 0ul) {
+    } else if (prime_candidate < 7ul || (prime_candidate & 0x01) == 0ul) {
         return false;
     } else if (prime_candidate <= primes_to)    {
-        // TODO: fix it for wheel 2x3x5
-        uint64_t bit_idx = (prime_candidate - 3ul) >> 1ul;
-        auto [idx, mask] = index_mask(bit_idx);
-        return (sieve[idx] & mask) > 0ul;
+        uint64_t bit_idx = 0ul;
+        if (is_in_image(prime_candidate, &bit_idx)) {
+            auto [idx, mask] = index_mask(bit_idx);
+            return (sieve[idx] & mask) > 0ul;
+        } else {
+            return false;
+        }
     } else {
         throw out_of_range("Increase the size of the sieve, too large prime to check!");
     }
