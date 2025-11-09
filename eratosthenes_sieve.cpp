@@ -473,35 +473,8 @@ void Eratosthenes::seed_bit_range(const prime_bit_masks& masks, const prime_whee
     for (uint64_t segment_start = start_bit; segment_start < end_bit; segment_start += segment_size)    {
         uint64_t segment_end = min(end_bit, segment_start + segment_size); 
 
-        // Use pattern to seed small primes.
-        for (uint64_t i = 0ul; i < masks.size(); ++i) {
-            const vector<uint64_t>& pattern = masks[i];
-            uint64_t pattern_chunks = pattern.size();
-            uint64_t segment_bits = segment_end - segment_start;
-            uint64_t partial_bits = segment_bits & UINT64_BIT_MASK;
-            uint64_t sieve_idx = (segment_start >> UINT64_IDX_SHIFT), pattern_idx = pattern_idxs[i];
-            uint64_t pattern_writes = (segment_bits >> UINT64_IDX_SHIFT) + (partial_bits == 0ul ? 0ul : 1ul);
-            uint64_t partial_pattern_count = min(pattern_writes, pattern_chunks - pattern_idx);
-
-            for (uint64_t i = 0; i < partial_pattern_count; ++i)
-                sieve[sieve_idx++] &= pattern[pattern_idx + i];
-            pattern_writes -= partial_pattern_count;
-
-            while (pattern_writes >= pattern_chunks) {
-                for (uint64_t i = 0; i < pattern_chunks; ++i)
-                    sieve[sieve_idx++] &= pattern[i];
-                pattern_writes -= pattern_chunks;
-            }
-
-            for (uint64_t i = 0; i < pattern_writes; ++i)
-                sieve[sieve_idx++] &= pattern[i];
-
-            if (pattern_idx + partial_pattern_count >= pattern_chunks)  {
-                pattern_idxs[i] = pattern_writes;
-            } else {
-                pattern_idxs[i] = pattern_idx + partial_pattern_count;
-            }
-        }
+        // Zero multiples of small primes by using bit masks.
+        seed_bit_range_small(masks, pattern_idxs, segment_start, segment_end);
 
         // Reset idividual bits for medium primes.
         for (uint64_t j = 0ul; j < min_idx_big_step; ++j)
@@ -510,6 +483,38 @@ void Eratosthenes::seed_bit_range(const prime_bit_masks& masks, const prime_whee
         // Reset idividual bits for large primes.
         for (uint64_t j = min_idx_big_step; j < wheel_steps.size(); ++j)
             seed_bit_range_large(wheel_steps[j], segment_end);
+    }
+}
+
+void Eratosthenes::seed_bit_range_small(const prime_bit_masks& masks, vector<uint64_t>& pattern_idxs, uint64_t start_bit, uint64_t end_bit)   {
+    // Use pattern to seed small primes.
+    for (uint64_t i = 0ul; i < masks.size(); ++i) {
+        const vector<uint64_t>& pattern = masks[i];
+        uint64_t pattern_chunks = pattern.size();
+        uint64_t segment_bits = end_bit - start_bit;
+        uint64_t partial_bits = segment_bits & UINT64_BIT_MASK;
+        uint64_t sieve_idx = (start_bit>>UINT64_IDX_SHIFT), pattern_idx = pattern_idxs[i];
+        uint64_t pattern_writes = (segment_bits >> UINT64_IDX_SHIFT) + (partial_bits == 0ul ? 0ul : 1ul);
+        uint64_t partial_pattern_count = min(pattern_writes, pattern_chunks - pattern_idx);
+
+        for (uint64_t i = 0; i < partial_pattern_count; ++i)
+            sieve[sieve_idx++] &= pattern[pattern_idx + i];
+        pattern_writes -= partial_pattern_count;
+
+        while (pattern_writes >= pattern_chunks) {
+            for (uint64_t i = 0; i < pattern_chunks; ++i)
+                sieve[sieve_idx++] &= pattern[i];
+            pattern_writes -= pattern_chunks;
+        }
+
+        for (uint64_t i = 0; i < pattern_writes; ++i)
+            sieve[sieve_idx++] &= pattern[i];
+
+        if (pattern_idx + partial_pattern_count >= pattern_chunks)  {
+            pattern_idxs[i] = pattern_writes;
+        } else {
+            pattern_idxs[i] = pattern_idx + partial_pattern_count;
+        }
     }
 }
 
