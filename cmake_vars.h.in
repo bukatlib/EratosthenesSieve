@@ -8,16 +8,19 @@
 #define WHEEL_2_3_5 1
 #define WHEEL_STEPS 8ul
 #define WHEEL_CIRCUMFERENCE 30ul
+#define WHEEL_MIN_SEGMENT_SIZE 1024ul
 #endif
 
 #if @USE_WHEEL_2_3@
 #define WHEEL_2_3 1
 #define WHEEL_STEPS 2ul
 #define WHEEL_CIRCUMFERENCE 6ul
+#define WHEEL_MIN_SEGMENT_SIZE 2048ul
 #endif
 
 #if @USE_WHEEL_2@
 #define WHEEL_2 1
 #define WHEEL_STEPS 1ul
 #define WHEEL_CIRCUMFERENCE 2ul
+#define WHEEL_MIN_SEGMENT_SIZE 2048ul
 #endif

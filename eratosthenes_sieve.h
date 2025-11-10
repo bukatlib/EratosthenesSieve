@@ -26,6 +26,40 @@ class Eratosthenes {
         void write_image(const std::string& filename) const;
 
     private:
+        #ifdef WHEEL_2_3_5
+        #pragma pack(push)
+        #pragma pack(1)
+        struct alignas(32) prime_wheel_steps {
+            uint64_t step_idx : 3;  // Eight steps for 2x3x5 wheel.
+            uint64_t bit_idx: 53;   // Will work up to 1000 TB of RAM
+            uint32_t step0: 25;     // Will work up to 620 GB of RAM, or primes up to 20 * 10^12
+            uint32_t step1: 25;
+            uint32_t step2: 25;
+            uint32_t step3: 25;
+            uint32_t step4: 25;
+            uint32_t step5: 25;
+            uint32_t step6: 25;
+            uint32_t step7: 25;
+        };
+        #pragma pack(pop)
+        #endif
+
+        #ifdef WHEEL_2_3
+        struct alignas(16) prime_wheel_steps {
+            uint64_t step_idx: 1;  // Two steps for 2x3 wheel.
+            uint64_t bit_idx: 63;
+            uint32_t step0;
+            uint32_t step1;
+        };
+        #endif
+
+        #ifdef WHEEL_2
+        struct prime_wheel_steps {
+            uint64_t bit_idx;
+            uint32_t step0;
+        };
+        #endif
+
         // Helper constants for bit manipulation.
         static constexpr uint64_t BITS_PER_BYTE = 8ul;
         static constexpr uint64_t UINT64_BYTES = sizeof(uint64_t);
@@ -61,23 +95,6 @@ class Eratosthenes {
         static bool is_in_image(uint64_t number, uint64_t* bit_idx = nullptr);
         static uint64_t sieve_bit_to_number(uint64_t bit_idx);
 
-        #ifdef WHEEL_2_3_5
-        #pragma pack(push)
-        #pragma pack(1)
-        struct alignas(32) prime_wheel_steps {
-            uint64_t step_idx : 3;  // Eight steps for 2x3x5 wheel.
-            uint64_t bit_idx: 53;   // Will work up to 1000 TB of RAM
-            uint32_t step0: 25;     // Will work up to 620 GB of RAM, or primes up to 20 * 10^12
-            uint32_t step1: 25;
-            uint32_t step2: 25;
-            uint32_t step3: 25;
-            uint32_t step4: 25;
-            uint32_t step5: 25;
-            uint32_t step6: 25;
-            uint32_t step7: 25;
-        };
-        #pragma pack(pop)
-        #endif
 
         static prime_wheel_steps wheel_steps(uint64_t prime);
 

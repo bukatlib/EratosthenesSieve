@@ -9,6 +9,25 @@
 #include "cpu_info.h"
 #include "eratosthenes_sieve.h"
 
+#ifdef WHEEL_2_3_5
+#define STEPS(prime_steps)  \
+        prime_steps.step0, prime_steps.step1, prime_steps.step2, prime_steps.step3, \
+        prime_steps.step4, prime_steps.step5, prime_steps.step6, prime_steps.step7
+#define STEP_IN_BITS(steps) \
+        steps[0] + steps[1] + steps[2] + steps[3] + steps[4] + steps[5] + steps[6] + steps[7]
+#endif
+
+#ifdef WHEEL_2_3
+#define STEPS(prime_steps) prime_steps.step0, prime_steps.step1
+#define STEP_IN_BITS(steps) steps[0] + steps[1]
+#endif
+
+#ifdef WHEEL_2
+#define STEPS(prime_steps) prime_steps.step0
+#define STEP_IN_BITS(steps) steps[0]
+#endif
+
+
 using namespace std;
 using namespace std::chrono;
 
@@ -64,9 +83,8 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
     segment_size *= BITS_PER_BYTE;
     assert(segment_size % UINT64_BITS == 0);
 
-    // Prime squared index is up to 1000 for masks, avoid reseting the previous bits.
-    segment_size = max(segment_size, 1024ul);
-
+    // Setup the minimal segment size to avoid reseting the previous bits.
+    segment_size = max(segment_size, WHEEL_MIN_SEGMENT_SIZE);
 }
 
 Eratosthenes::~Eratosthenes()	{
@@ -389,6 +407,7 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
     prime_wheel_steps wheel_steps_struct;
     wheel_steps_struct.step_idx = 0ul;
     wheel_steps_struct.bit_idx = *min_bit_idx_sit;
+    #ifdef WHEEL_2_3_5
     wheel_steps_struct.step0 = prime_steps[0];
     wheel_steps_struct.step1 = prime_steps[1];
     wheel_steps_struct.step2 = prime_steps[2];
@@ -397,6 +416,7 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
     wheel_steps_struct.step5 = prime_steps[5];
     wheel_steps_struct.step6 = prime_steps[6];
     wheel_steps_struct.step7 = prime_steps[7];
+    #endif
 
     return wheel_steps_struct;
 }
@@ -442,11 +462,8 @@ void Eratosthenes::seed_bit_range(const prime_bit_masks& masks, const prime_whee
 
     for (uint64_t i = 0ul; i < wheel_data.size(); ++i)  {
         prime_wheel_steps prime_data = wheel_data[i];
-        uint32_t steps[8] = {
-            prime_data.step0, prime_data.step1, prime_data.step2, prime_data.step3,
-            prime_data.step4, prime_data.step5, prime_data.step6, prime_data.step7
-        };
-        uint64_t sieve_step_in_bits = steps[0] + steps[1] + steps[2] + steps[3] + steps[4] + steps[5] + steps[6] + steps[7];
+        uint32_t steps[8] = { STEPS(prime_data) };
+        uint64_t sieve_step_in_bits = STEP_IN_BITS(steps);
 
         uint64_t init_bit = prime_data.bit_idx;
         uint64_t step_mult = (max(start_bit, init_bit) - init_bit) / sieve_step_in_bits;
@@ -524,10 +541,7 @@ void Eratosthenes::seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_
         return;
 
     uint8_t step_idx = prime_steps.step_idx;
-    uint32_t steps[8ul] = {
-        prime_steps.step0, prime_steps.step1, prime_steps.step2, prime_steps.step3,
-        prime_steps.step4, prime_steps.step5, prime_steps.step6, prime_steps.step7
-    };
+    uint32_t steps[8ul] = { STEPS(prime_steps) };
 
     uint64_t offset0 = 0ul;
     uint64_t offset1 = offset0 + steps[(step_idx + 0) & 0x7];
