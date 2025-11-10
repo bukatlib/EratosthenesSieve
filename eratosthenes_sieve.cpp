@@ -634,9 +634,9 @@ vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime) {
     return masks;
 }
 
-constexpr array<uint64_t, Eratosthenes::WHEEL_NUMBER_OF_COPRIMES> Eratosthenes::compute_wheel_2_3_5()    {
+constexpr array<uint64_t, WHEEL_STEPS> Eratosthenes::compute_wheel_2_3_5()    {
     uint64_t wheel_idx = 0ul;
-    array<uint64_t, WHEEL_NUMBER_OF_COPRIMES> wheel = { };
+    array<uint64_t, WHEEL_STEPS> wheel = { };
     for (uint64_t n = 0ul; n < WHEEL_CIRCUMFERENCE; ++n)   {
         bool div_by_2 = (n % 2ul) == 0ul;
         bool div_by_3 = (n % 3ul) == 0ul;
@@ -649,7 +649,7 @@ constexpr array<uint64_t, Eratosthenes::WHEEL_NUMBER_OF_COPRIMES> Eratosthenes::
     return wheel;
 }
 
-constexpr array<int8_t, Eratosthenes::WHEEL_CIRCUMFERENCE> Eratosthenes::compute_modulo_to_wheel_idx()   {
+constexpr array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::compute_modulo_to_wheel_idx()   {
     array<int8_t, WHEEL_CIRCUMFERENCE> mod_to_idx = { };
     for (uint64_t n = 0; n < WHEEL_CIRCUMFERENCE; ++n)
         mod_to_idx[n] = -1;
@@ -661,5 +661,5 @@ constexpr array<int8_t, Eratosthenes::WHEEL_CIRCUMFERENCE> Eratosthenes::compute
     return mod_to_idx;
 }
 
-alignas(64) const array<uint64_t, Eratosthenes::WHEEL_NUMBER_OF_COPRIMES> Eratosthenes::wheel = Eratosthenes::compute_wheel_2_3_5();
-alignas(32) const array<int8_t, Eratosthenes::WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = Eratosthenes::compute_modulo_to_wheel_idx();
+alignas(64) const array<uint64_t, WHEEL_STEPS> Eratosthenes::wheel = Eratosthenes::compute_wheel_2_3_5();
+alignas(32) const array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = Eratosthenes::compute_modulo_to_wheel_idx();

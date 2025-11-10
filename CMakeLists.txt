@@ -3,6 +3,9 @@ cmake_minimum_required (VERSION 3.22)
 set (CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type.")
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 
+set (WHEEL_TYPE "2x3x5" CACHE STRING "Wheel.")
+set_property(CACHE WHEEL_TYPE PROPERTY STRINGS "2x3x5" "2x3" "2")
+
 
 project (Eratosthenes VERSION 1.0.0)
 
@@ -48,6 +51,19 @@ cmake_host_system_information(RESULT CMAKE_TOTAL_PHYSICAL_MEMORY QUERY TOTAL_PHY
 cmake_host_system_information(RESULT CMAKE_OS_NAME QUERY OS_NAME)
 cmake_host_system_information(RESULT CMAKE_OS_RELEASE QUERY OS_RELEASE)
 cmake_host_system_information(RESULT CMAKE_OS_VERSION QUERY OS_VERSION)
+
+# Setup the USE variable based on the selected wheel type.
+set(USE_WHEEL_2_3_5 0)
+set(USE_WHEEL_2_3 0)
+set(USE_WHEEL_2 0)
+
+if ("${WHEEL_TYPE}" STREQUAL "2x3x5")
+    set(USE_WHEEL_2_3_5 1)
+elseif ("${WHEEL_TYPE}" STREQUAL "2x3")
+    set(USE_WHEEL_2_3 1)
+else()
+    set(USE_WHEEL_2 1)
+endif()
 
 configure_file ("cmake_vars.h.in" "${PROJECT_BINARY_DIR}/cmake_vars.h")
 include_directories ("${PROJECT_BINARY_DIR}")

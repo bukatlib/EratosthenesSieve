@@ -6,6 +6,7 @@
 #include <tuple>
 #include <vector>
 #include <stdint.h>
+#include "cmake_vars.h"
 
 class Eratosthenes {
     public:
@@ -39,31 +40,28 @@ class Eratosthenes {
         static_assert(MAX_MASKS_PER_PRIME >= 61ul, "At least 61 masks are required for the biggest seeding prime.");
 
         // The maximal small prime number used for vectorized zeroing by using bit masking.
-        // up to 41: 9488 bytes; up to 61: 13696 bytes (43, 47, 53, 59, 61 contain zero holes in the pattern)
+        // up to 41: 9488 bytes; up to 61: 13696 bytes (43, 47, 53, 59, 61 contain zero holes for 2x3x5)
         static constexpr uint64_t MAX_SMALL_PRIME = 59ul;
 
-        // Wheel 2x3x5 (basis) helper constants, computation functions, read-only wheel data.
-        static constexpr uint64_t WHEEL_NUMBER_OF_COPRIMES = 8ul;
-        static constexpr uint64_t WHEEL_BITS = 8ul;
-        static constexpr uint64_t WHEEL_CIRCUMFERENCE = 30ul;
-
-        static constexpr std::array<uint64_t, WHEEL_NUMBER_OF_COPRIMES> compute_wheel_2_3_5();
-        static constexpr std::array<int8_t, WHEEL_CIRCUMFERENCE> compute_modulo_to_wheel_idx();
-
         // List of numbers coprime to wheel 2x3x5 (basis), align to a typical cache line.
-        alignas(64) static const std::array<uint64_t, WHEEL_NUMBER_OF_COPRIMES> wheel;
+        alignas(64) static const std::array<uint64_t, WHEEL_STEPS> wheel;
+        static constexpr std::array<uint64_t, WHEEL_STEPS> compute_wheel_2_3_5();
 
         // Mapping from a modulo 2x3x5 to the wheel index (-1 if not in the wheel).
         alignas(32) static const std::array<int8_t, WHEEL_CIRCUMFERENCE> modulo_to_idx;
+        static constexpr std::array<int8_t, WHEEL_CIRCUMFERENCE> compute_modulo_to_wheel_idx();
 
-        uint64_t find_next_set_bit(uint64_t start_bit_idx) const;
-        void reset_bit(uint64_t bit_idx);
-
+        // Core methods to get bit array idx and mask to extract or reset a bit.
         static std::tuple<uint64_t, uint64_t> index_mask(uint64_t bit_idx);
         static std::tuple<uint64_t, uint64_t> index_reset_mask(uint64_t bit_idx);
-        static uint64_t sieve_bit_to_number(uint64_t bit_idx);
-        static bool is_in_image(uint64_t number, uint64_t* bit_idx = nullptr);
+        void reset_bit(uint64_t bit_idx);
 
+        // Helper bit methods to find the first set bit or check whether a number is in the wheel.
+        uint64_t find_next_set_bit(uint64_t start_bit_idx) const;
+        static bool is_in_image(uint64_t number, uint64_t* bit_idx = nullptr);
+        static uint64_t sieve_bit_to_number(uint64_t bit_idx);
+
+        #ifdef WHEEL_2_3_5
         #pragma pack(push)
         #pragma pack(1)
         struct alignas(32) prime_wheel_steps {
@@ -79,6 +77,7 @@ class Eratosthenes {
             uint32_t step7: 25;
         };
         #pragma pack(pop)
+        #endif
 
         static prime_wheel_steps wheel_steps(uint64_t prime);
 
