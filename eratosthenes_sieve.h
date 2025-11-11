@@ -60,15 +60,6 @@ class Eratosthenes {
         };
         #endif
 
-        // Helper constants for bit manipulation.
-        static constexpr uint64_t BITS_PER_BYTE = 8ul;
-        static constexpr uint64_t UINT64_BYTES = sizeof(uint64_t);
-        static constexpr uint64_t UINT64_BITS = BITS_PER_BYTE * sizeof(uint64_t);
-        static_assert(UINT64_BITS == 64ul, "Unexpected number of bits in uint64_t!");
-        static constexpr uint64_t UINT64_ONE_MASK = 0xff'ff'ff'ff'ff'ff'ff'ff;
-        static constexpr uint64_t UINT64_BIT_MASK = 0x00'00'00'00'00'00'00'3f;
-        static constexpr uint64_t UINT64_IDX_SHIFT = 6ul;
-
         // Max number of uin64_t masks per small prime in the seeding vector.
         static constexpr uint64_t MAX_MASKS_PER_PRIME = 128ul;
         static_assert(MAX_MASKS_PER_PRIME >= 61ul, "At least 61 masks are required for the biggest seeding prime.");

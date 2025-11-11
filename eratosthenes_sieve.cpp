@@ -168,7 +168,7 @@ void Eratosthenes::sieve_primes()    {
 
 uint64_t Eratosthenes::prime_count()  {
     if (primes_to >= WHEEL_MIN_PRIME)  {
-        uint64_t size_aligned = sieve_size & 0xffffffff'fffffffc;
+        uint64_t size_aligned = sieve_size & ALIGN_FOUR_MASK;
         uint64_t thread_count = Eratosthenes::init_pop_thread_count();
         uint64_t count0 = 0ul, count1 = 0ul, count2 = 0ul, count3 = 0ul, count4 = 0ul;
 
