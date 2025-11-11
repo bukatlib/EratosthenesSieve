@@ -167,35 +167,29 @@ void Eratosthenes::sieve_primes()    {
 }
 
 uint64_t Eratosthenes::prime_count()  {
-    if (primes_to >= 7ul)  {
+    if (primes_to >= WHEEL_MIN_PRIME)  {
         uint64_t size_aligned = sieve_size & 0xffffffff'fffffffc;
         uint64_t thread_count = Eratosthenes::init_pop_thread_count();
         uint64_t count0 = 0ul, count1 = 0ul, count2 = 0ul, count3 = 0ul, count4 = 0ul;
 
         #pragma omp parallel for reduction(+: count0,count1,count2,count3) if(sieve_size > 10000000) num_threads(thread_count)
-        for (uint64_t uint64_idx = 0; uint64_idx < size_aligned; uint64_idx += 4)  {
-            count0 += popcount(sieve[uint64_idx + 0]);
-            count1 += popcount(sieve[uint64_idx + 1]);
-            count2 += popcount(sieve[uint64_idx + 2]);
-            count3 += popcount(sieve[uint64_idx + 3]);
+        for (uint64_t uint64_idx = 0ul; uint64_idx < size_aligned; uint64_idx += 4ul)  {
+            count0 += popcount(sieve[uint64_idx + 0ul]);
+            count1 += popcount(sieve[uint64_idx + 1ul]);
+            count2 += popcount(sieve[uint64_idx + 2ul]);
+            count3 += popcount(sieve[uint64_idx + 3ul]);
         }
 
         for (uint64_t uint64_idx = size_aligned; uint64_idx < sieve_size; ++uint64_idx)
             count4 += popcount(sieve[uint64_idx]);
 
         // Add three for primes 2, 3, and 5.
-        found_primes = 3ul + count0 + count1 + count2 + count3 + count4;
-    } else if (primes_to >= 5ul) {
-        // Primes 2, 3, 5 but not 7 and greater.
-        found_primes = 3ul;
-    } else if (primes_to >= 3ul) {
-        // Primes 2, 3 but not 5 and greater.
-        found_primes = 2ul;
-    } else if (primes_to >= 2ul) {
-        // Prime 2 but not 3 and greater.
-        found_primes = 1ul;
+        found_primes = WHEEL_IMPLICIT_PRIMES + count0 + count1 + count2 + count3 + count4;
     } else {
-        found_primes = 0ul;
+        // primes to:                                         0    1    2    3    4    5    6
+        static constexpr array<uint64_t, 7ul> prime2count = { 0ul, 0ul, 1ul, 2ul, 2ul, 3ul, 3ul };
+        assert(primes_to < prime2count.size());
+        found_primes = prime2count[primes_to];
     }
 
     return found_primes;
