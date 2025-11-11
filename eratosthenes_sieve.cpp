@@ -270,16 +270,21 @@ void Eratosthenes::write_image(const string& filename) const {
 }
 
 bool Eratosthenes::is_prime(uint64_t prime_candidate) const {
-    if (prime_candidate == 2ul || prime_candidate == 3ul || prime_candidate == 5ul)   {
-        return true;
-    } else if (prime_candidate < 7ul || (prime_candidate & 0x01) == 0ul) {
+    static constexpr array<uint64_t, WHEEL_IMPLICIT_PRIMES_COUNT> wheel_implicit_primes = WHEEL_IMPLICIT_PRIMES;
+    if ((prime_candidate & 1ul) == 0 && prime_candidate > 2ul)  {
+        // Even numbers bigger than 2 are not primes.
         return false;
+    } else if (count(wheel_implicit_primes.cbegin(), wheel_implicit_primes.cend(), prime_candidate) == 1ul)    {
+        // It is a prime used in the wheel's basis.
+        return true;
     } else if (prime_candidate <= primes_to)    {
         uint64_t bit_idx = 0ul;
         if (is_in_image(prime_candidate, &bit_idx)) {
+            // Number stored in the sieve binary image, check the bit.
             auto [idx, mask] = index_mask(bit_idx);
             return (sieve[idx] & mask) > 0ul;
         } else {
+            // Number not in the sieve image, a multiple of implicit prime(s).
             return false;
         }
     } else {
