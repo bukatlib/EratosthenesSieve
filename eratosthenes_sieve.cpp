@@ -183,8 +183,8 @@ uint64_t Eratosthenes::prime_count()  {
         for (uint64_t uint64_idx = size_aligned; uint64_idx < sieve_size; ++uint64_idx)
             count4 += popcount(sieve[uint64_idx]);
 
-        // Add three for primes 2, 3, and 5.
-        found_primes = WHEEL_IMPLICIT_PRIMES + count0 + count1 + count2 + count3 + count4;
+        // Add implicit primes based on the wheel type, for example, primes 2, 3, 5 for 2x3x5 wheel.
+        found_primes = WHEEL_IMPLICIT_PRIMES_COUNT + count0 + count1 + count2 + count3 + count4;
     } else {
         // primes to:                                         0    1    2    3    4    5    6
         static constexpr array<uint64_t, 7ul> prime2count = { 0ul, 0ul, 1ul, 2ul, 2ul, 3ul, 3ul };
@@ -198,13 +198,12 @@ uint64_t Eratosthenes::prime_count()  {
 vector<uint64_t> Eratosthenes::primes() const {
     vector<uint64_t> primes;
     primes.reserve(found_primes);
-    if (primes_to >= 2ul)
-        primes.push_back(2ul);
-    if (primes_to >= 3ul)
-        primes.push_back(3ul);
-    if (primes_to >= 5ul)
-        primes.push_back(5ul);
-    
+
+    for (uint64_t implicit_prime: WHEEL_IMPLICIT_PRIMES) {
+        if (implicit_prime <= primes_to)
+            primes.push_back(implicit_prime);
+    }
+
     if (sieve_size > 0ul)  {
         uint64_t prime_bit_idx = 0;
         while ((prime_bit_idx = find_next_set_bit(prime_bit_idx)) < sieve_bits) {
@@ -229,12 +228,10 @@ void Eratosthenes::write_primes_to_file(const string& filename) const {
         return;
     }
 
-    if (primes_to >= 2ul)
-        OUT<<2<<"\n";
-    if (primes_to >= 3ul)
-        OUT<<3<<"\n";
-    if (primes_to >= 5ul)
-        OUT<<5<<"\n";
+    for (uint64_t implicit_prime: WHEEL_IMPLICIT_PRIMES) {
+        if (implicit_prime <= primes_to)
+            OUT<<implicit_prime<<"\n";
+    }
 
     if (sieve_size > 0ul)  {
         array<uint64_t, 4> prime_buffer;

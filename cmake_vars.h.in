@@ -10,7 +10,8 @@
 #define WHEEL_CIRCUMFERENCE 30ul
 #define WHEEL_MIN_SEGMENT_SIZE 1024ul
 #define WHEEL_MIN_PRIME 7ul
-#define WHEEL_IMPLICIT_PRIMES 3ul
+#define WHEEL_IMPLICIT_PRIMES { 2ul, 3ul, 5ul }
+#define WHEEL_IMPLICIT_PRIMES_COUNT 3ul
 #endif
 
 #if @USE_WHEEL_2_3@
@@ -19,7 +20,8 @@
 #define WHEEL_CIRCUMFERENCE 6ul
 #define WHEEL_MIN_SEGMENT_SIZE 2048ul
 #define WHEEL_MIN_PRIME 5ul
-#define WHEEL_IMPLICIT_PRIMES 2ul
+#define WHEEL_IMPLICIT_PRIMES { 2ul, 3ul }
+#define WHEEL_IMPLICIT_PRIMES_COUNT 2ul
 #endif
 
 #if @USE_WHEEL_2@
@@ -28,5 +30,8 @@
 #define WHEEL_CIRCUMFERENCE 2ul
 #define WHEEL_MIN_SEGMENT_SIZE 2048ul
 #define WHEEL_MIN_PRIME 3ul
-#define WHEEL_IMPLICIT_PRIMES 1ul
+#define WHEEL_IMPLICIT_PRIMES { 2ul }
+#define WHEEL_IMPLICIT_PRIMES_COUNT 1ul
 #endif
+
+static_assert(@USE_WHEEL_2_3_5@ + @USE_WHEEL_2_3@ + @USE_WHEEL_2@ == 1, "Just one wheel should be selected!");
