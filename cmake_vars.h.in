@@ -42,4 +42,5 @@ static_assert(@USE_WHEEL_2_3_5@ + @USE_WHEEL_2_3@ + @USE_WHEEL_2@ == 1, "Just on
 #define UINT64_ONE_MASK 0xff'ff'ff'ff'ff'ff'ff'ff
 #define UINT64_BIT_MASK 0x00'00'00'00'00'00'00'3f
 #define UINT64_IDX_SHIFT 6ul
-#define ALIGN_FOUR_MASK 0xffffffff'fffffffc
+#define CLEAR_BIT0_MASK 0xffff'ffff'ffff'fffe
+#define ALIGN_FOUR_MASK 0xffff'ffff'ffff'fffc

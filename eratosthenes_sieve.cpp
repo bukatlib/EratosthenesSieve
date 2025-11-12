@@ -271,10 +271,7 @@ void Eratosthenes::write_image(const string& filename) const {
 
 bool Eratosthenes::is_prime(uint64_t prime_candidate) const {
     static constexpr array<uint64_t, WHEEL_IMPLICIT_PRIMES_COUNT> wheel_implicit_primes = WHEEL_IMPLICIT_PRIMES;
-    if ((prime_candidate & 1ul) == 0 && prime_candidate > 2ul)  {
-        // Even numbers bigger than 2 are not primes.
-        return false;
-    } else if (count(wheel_implicit_primes.cbegin(), wheel_implicit_primes.cend(), prime_candidate) == 1ul)    {
+    if (count(wheel_implicit_primes.cbegin(), wheel_implicit_primes.cend(), prime_candidate) == 1ul)    {
         // It is a prime used in the wheel's basis.
         return true;
     } else if (prime_candidate <= primes_to)    {
@@ -334,9 +331,10 @@ tuple<uint64_t, uint64_t> Eratosthenes::index_mask(uint64_t bit_idx)   {
 
 tuple<uint64_t, uint64_t> Eratosthenes::index_reset_mask(uint64_t bit_idx)   {
     // Index to sieve vector and set/get bitmask.
-    return {bit_idx >> UINT64_IDX_SHIFT, rotl(0xffff'ffff'ffff'fffe, UINT64_BIT_MASK & bit_idx)};
+    return {bit_idx >> UINT64_IDX_SHIFT, rotl(CLEAR_BIT0_MASK, UINT64_BIT_MASK & bit_idx)};
 }
 
+// TODO: continue...
 uint64_t Eratosthenes::sieve_bit_to_number(uint64_t bit_idx)   {
     // Calculate the wheel 2x3x5 index in the sieve and the modulo.
     constexpr uint64_t basis_size = 8ul;

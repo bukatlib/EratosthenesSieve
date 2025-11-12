@@ -115,6 +115,7 @@ class Eratosthenes {
 		uint64_t sieve_size;
 
         // Segment size, L1 data cache on ARM64, L2 data cache per hw thread on AMD64.
+        // TODO: more contants to handle parallel execution
         uint64_t segment_size;
         static constexpr uint64_t WORKCHUNK_SEGMENTS = 28ul;
 };
