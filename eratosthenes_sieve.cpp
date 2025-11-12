@@ -234,7 +234,7 @@ void Eratosthenes::write_primes_to_file(const string& filename) const {
     }
 
     if (sieve_size > 0ul)  {
-        array<uint64_t, 4> prime_buffer;
+        array<uint64_t, 4ul> prime_buffer;
         uint64_t buffer_idx = 0ul, prime_bit_idx = 0ul;
         while ((prime_bit_idx = find_next_set_bit(prime_bit_idx)) < sieve_bits) {
             uint64_t prime_val = sieve_bit_to_number(prime_bit_idx);
@@ -334,33 +334,29 @@ tuple<uint64_t, uint64_t> Eratosthenes::index_reset_mask(uint64_t bit_idx)   {
     return {bit_idx >> UINT64_IDX_SHIFT, rotl(CLEAR_BIT0_MASK, UINT64_BIT_MASK & bit_idx)};
 }
 
-// TODO: continue...
 uint64_t Eratosthenes::sieve_bit_to_number(uint64_t bit_idx)   {
-    // Calculate the wheel 2x3x5 index in the sieve and the modulo.
-    constexpr uint64_t basis_size = 8ul;
-    constexpr uint64_t wheel_circumference = 30ul;
-    uint64_t wheel_count = bit_idx / basis_size;
-    uint64_t wheel_bit_idx = bit_idx - basis_size * wheel_count;
-    uint64_t number = wheel_circumference * wheel_count + wheel[wheel_bit_idx];
+    // Calculate the wheel index in the sieve and the modulo.
+    uint64_t wheel_count = bit_idx / WHEEL_STEPS;
+    uint64_t wheel_bit_idx = bit_idx - WHEEL_STEPS * wheel_count;
+    uint64_t number = WHEEL_CIRCUMFERENCE * wheel_count + wheel[wheel_bit_idx];
     return number;
 }
 
 bool Eratosthenes::is_in_image(uint64_t number, uint64_t* bit_idx) {
     if ((number & 0x1) == 0ul)  {
-        // Divisible by 2 -> not in the sieve image.
+        // Divisible by 2 -> not in the sieve image for wheels 2, 2x3, and 2x3x5.
         return false;
     } else {
-        constexpr uint64_t wheel_circumference = 30ul;
-        uint64_t wheel_count = number / wheel_circumference;
-        uint64_t modulo = number - wheel_circumference * wheel_count;
+        uint64_t wheel_count = number / WHEEL_CIRCUMFERENCE;
+        uint64_t modulo = number - WHEEL_CIRCUMFERENCE * wheel_count;
         int8_t wheel_bit_idx = Eratosthenes::modulo_to_idx[modulo];
         if (wheel_bit_idx >= 0)   {
-            // Not divisible by 2, 3, or 5 -> in the sieve binary image.
+            // Not divisible by any implicit prime -> in the sieve binary image.
             if (bit_idx != nullptr)
-                *bit_idx = 8ul * wheel_count + wheel_bit_idx;
+                *bit_idx = WHEEL_STEPS * wheel_count + wheel_bit_idx;
             return true;
         } else {
-            // Divisible by 3 or 5 -> not in the sieve image.
+            // Divisible by an implicit prime -> not in the sieve image.
             return false;
         }
     }
@@ -370,8 +366,8 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
     // Start from the square of the found prime.
     uint64_t current_number = prime * prime;
 
-    array<bool, 8> modulo_idx_found = {};
-    array<uint64_t, 8> wheel_modulo_idxs = {};
+    array<bool, WHEEL_STEPS> modulo_idx_found = {};
+    array<uint64_t, WHEEL_STEPS> wheel_modulo_idxs = {};
 
     do {
         uint64_t bit_idx = 0ul;
@@ -385,23 +381,24 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
         current_number += prime;
     } while (find(modulo_idx_found.cbegin(), modulo_idx_found.cend(), false) != modulo_idx_found.cend());
 
-    array<uint64_t, 9ul> bit_idxs_shifted = {};
+    array<uint64_t, WHEEL_STEPS + 1ul> bit_idxs_shifted = {};
     auto min_bit_idx_sit = min_element(wheel_modulo_idxs.cbegin(), wheel_modulo_idxs.cend());
-    for (uint64_t i = 0; i < wheel_modulo_idxs.size(); ++i)
+    for (uint64_t i = 0ul; i < wheel_modulo_idxs.size(); ++i)
         bit_idxs_shifted[i] = wheel_modulo_idxs[i] - *min_bit_idx_sit;
-    bit_idxs_shifted[8] = 8ul*prime;
+    bit_idxs_shifted[WHEEL_STEPS] = WHEEL_STEPS * prime;
 
-    array<uint64_t, 8ul> prime_steps = {};
+    array<uint64_t, WHEEL_STEPS> prime_steps = {};
     sort(bit_idxs_shifted.begin(), bit_idxs_shifted.end());
-    for (uint64_t i = 0; i + 1 < bit_idxs_shifted.size(); ++i)
-        prime_steps[i] = bit_idxs_shifted[i+1] - bit_idxs_shifted[i];
+    for (uint64_t i = 0ul; i + 1ul < bit_idxs_shifted.size(); ++i)
+        prime_steps[i] = bit_idxs_shifted[i + 1ul] - bit_idxs_shifted[i];
 
-    assert(accumulate(prime_steps.cbegin(), prime_steps.cend(), 0ul) == 8ul*prime);
+    assert(accumulate(prime_steps.cbegin(), prime_steps.cend(), 0ul) == WHEEL_STEPS * prime);
 
     prime_wheel_steps wheel_steps_struct;
-    wheel_steps_struct.step_idx = 0ul;
-    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
+
     #ifdef WHEEL_2_3_5
+    wheel_steps_struct.step_idx = 0;
+    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
     wheel_steps_struct.step0 = prime_steps[0];
     wheel_steps_struct.step1 = prime_steps[1];
     wheel_steps_struct.step2 = prime_steps[2];
@@ -412,8 +409,21 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
     wheel_steps_struct.step7 = prime_steps[7];
     #endif
 
+    #ifdef WHEEL_2_3
+    wheel_steps_struct.step_idx = 0;
+    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
+    wheel_steps_struct.step0 = prime_steps[0];
+    wheel_steps_struct.step1 = prime_steps[1];
+    #endif
+
+    #ifdef WHEEL_2
+    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
+    wheel_steps_struct.step0 = prime_steps[0];
+    #endif
+
     return wheel_steps_struct;
 }
+// TODO: continue...
 
 uint64_t Eratosthenes::sieve_size_bits(uint64_t primes_to)  {
     // Count the number of bits needed for the whole wheels first.
