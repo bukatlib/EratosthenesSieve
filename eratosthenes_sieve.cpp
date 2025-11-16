@@ -83,6 +83,26 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
     segment_size = max(segment_size, WHEEL_MIN_SEGMENT_SIZE);
 }
 
+Eratosthenes::Eratosthenes(const string& filename) : segment_size(DEFAULT_SEGMENT_SIZE) {
+    uint64_t wheel_type = UINT64_ONE_MASK;
+
+    ifstream IN(filename.c_str(), ios::in | ios::binary);
+
+    IN.read(reinterpret_cast<char*>(&sieve_bits), UINT64_BYTES);
+    IN.read(reinterpret_cast<char*>(&primes_to), UINT64_BYTES);
+    IN.read(reinterpret_cast<char*>(&wheel_type), UINT64_BYTES);
+    if (wheel_type != WHEEL_STEPS)  {
+        cerr<<"Incompatible binary for the current wheel!"<<endl;
+        throw invalid_argument("The input file is for the wheel with " + to_string(wheel_type) + "steps!");
+    }
+
+    sieve_size = sieve_size_elems(sieve_bits);
+    sieve = new uint64_t[sieve_size];
+    IN.read(reinterpret_cast<char*>(sieve), UINT64_BYTES * sieve_size);
+
+    IN.close();
+}
+
 Eratosthenes::~Eratosthenes()	{
 	delete[] sieve;
 }
@@ -93,6 +113,10 @@ uint64_t Eratosthenes::bit_size() const {
 
 uint64_t Eratosthenes::bytes_allocated() const {
     return UINT64_BYTES * sieve_size;
+}
+
+uint64_t Eratosthenes::to_sieved() const {
+    return primes_to;
 }
 
 void Eratosthenes::sieve_primes()    {
@@ -264,11 +288,12 @@ void Eratosthenes::write_primes_to_file(const string& filename) const {
 }
 
 void Eratosthenes::write_image(const string& filename) const {
+    uint64_t wheel_type = WHEEL_STEPS;
     ofstream OUT(filename.c_str(), ios::out | ios::trunc | ios::binary);
-
-    for (uint64_t i = 0ul; i < sieve_size; ++i)
-        OUT.write(reinterpret_cast<char*>(&sieve[i]), UINT64_BYTES);
-
+    OUT.write(reinterpret_cast<const char*>(&sieve_bits), UINT64_BYTES);
+    OUT.write(reinterpret_cast<const char*>(&primes_to), UINT64_BYTES);
+    OUT.write(reinterpret_cast<const char*>(&wheel_type), UINT64_BYTES);
+    OUT.write(reinterpret_cast<const char*>(sieve), UINT64_BYTES * sieve_size);
     OUT.flush();
     OUT.close();
 }

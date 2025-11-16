@@ -11,12 +11,14 @@
 class Eratosthenes {
     public:
         Eratosthenes(uint64_t primes_to);
+        Eratosthenes(const std::string& filename);
 		Eratosthenes(const Eratosthenes&) = delete;
 		Eratosthenes& operator=(const Eratosthenes&) = delete;
 		~Eratosthenes();
 
         uint64_t bit_size() const;
         uint64_t bytes_allocated() const;
+        uint64_t to_sieved() const;
 
         void sieve_primes();
 
