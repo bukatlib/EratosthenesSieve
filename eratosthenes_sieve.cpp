@@ -372,10 +372,14 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
     do {
         uint64_t bit_idx = 0ul;
         if (Eratosthenes::is_in_image(current_number, &bit_idx))    {
-            uint64_t byte_bit_idx = bit_idx & 0x7;
-            assert(modulo_idx_found[byte_bit_idx] == false);
-            wheel_modulo_idxs[byte_bit_idx] = bit_idx;
-            modulo_idx_found[byte_bit_idx] = true;
+            #ifdef WHEEL_2_3_5
+            uint64_t modulo_idx = bit_idx & 0x7;
+            #else
+            uint64_t modulo_idx = bit_idx - WHEEL_STEPS * (current_number / WHEEL_CIRCUMFERENCE);
+            #endif
+            assert(modulo_idx_found[modulo_idx] == false);
+            wheel_modulo_idxs[modulo_idx] = bit_idx;
+            modulo_idx_found[modulo_idx] = true;
         }
 
         current_number += prime;
@@ -423,18 +427,15 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
 
     return wheel_steps_struct;
 }
-// TODO: continue...
 
 uint64_t Eratosthenes::sieve_size_bits(uint64_t primes_to)  {
     // Count the number of bits needed for the whole wheels first.
-    constexpr uint64_t wheel_bits = 8ul;
-    constexpr uint64_t wheel_circumference = 30ul;
-    uint64_t wheel_count = primes_to / wheel_circumference;
-    uint64_t bitcount_whole_wheels = wheel_bits * wheel_count;
+    uint64_t wheel_count = primes_to / WHEEL_CIRCUMFERENCE;
+    uint64_t bitcount_whole_wheels = WHEEL_STEPS * wheel_count;
 
     // Define the modulo to determine the number of required bits for the partial (last) wheel.
     uint64_t bitcount_total = bitcount_whole_wheels, idx = 0ul;
-    uint64_t modulo_circumference = primes_to - wheel_circumference * wheel_count;
+    uint64_t modulo_circumference = primes_to - WHEEL_CIRCUMFERENCE * wheel_count;
     while (idx < Eratosthenes::wheel.size() && modulo_circumference >= Eratosthenes::wheel[idx++])
         bitcount_total++;
 
@@ -466,7 +467,7 @@ void Eratosthenes::seed_bit_range(const prime_bit_masks& masks, const prime_whee
 
     for (uint64_t i = 0ul; i < wheel_data.size(); ++i)  {
         prime_wheel_steps prime_data = wheel_data[i];
-        uint32_t steps[8] = { STEPS(prime_data) };
+        uint32_t steps[WHEEL_STEPS] = { STEPS(prime_data) };
         uint64_t sieve_step_in_bits = STEP_IN_BITS(steps);
 
         uint64_t init_bit = prime_data.bit_idx;
@@ -474,14 +475,21 @@ void Eratosthenes::seed_bit_range(const prime_bit_masks& masks, const prime_whee
         uint64_t start_bit_wheel_idx = init_bit + step_mult * sieve_step_in_bits;
         assert((start_bit_wheel_idx - init_bit) % sieve_step_in_bits == 0ul);
 
+        #ifdef WHEEL_2
+        if (start_bit_wheel_idx < start_bit)
+            start_bit_wheel_idx += sieve_step_in_bits;
+        #else
         uint8_t step_idx = prime_data.step_idx;
         while (start_bit_wheel_idx < start_bit) {
             start_bit_wheel_idx += steps[step_idx];
-            step_idx = (step_idx + 1u) & 0x7;
+            step_idx = (step_idx + 1u) & WHEEL_STEPS_MASK;
         }
+        #endif
 
         if (start_bit_wheel_idx < end_bit)   {
+            #if not defined WHEEL_2
             prime_data.step_idx = step_idx;
+            #endif
             prime_data.bit_idx = start_bit_wheel_idx;
             if (MAX_STEPS_FOR_SMALL*sieve_step_in_bits > segment_size)
                 min_idx_big_step = min(min_idx_big_step, i);
@@ -539,23 +547,24 @@ void Eratosthenes::seed_bit_range_small(const prime_bit_masks& masks, vector<uin
     }
 }
 
+#ifdef WHEEL_2_3_5
 void Eratosthenes::seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
     uint64_t start_bit = prime_steps.bit_idx;
     if (start_bit >= end_bit)
         return;
 
     uint8_t step_idx = prime_steps.step_idx;
-    uint32_t steps[8ul] = { STEPS(prime_steps) };
+    uint32_t steps[WHEEL_STEPS] = { STEPS(prime_steps) };
 
     uint64_t offset0 = 0ul;
-    uint64_t offset1 = offset0 + steps[(step_idx + 0) & 0x7];
-    uint64_t offset2 = offset1 + steps[(step_idx + 1) & 0x7];
-    uint64_t offset3 = offset2 + steps[(step_idx + 2) & 0x7];
-    uint64_t offset4 = offset3 + steps[(step_idx + 3) & 0x7];
-    uint64_t offset5 = offset4 + steps[(step_idx + 4) & 0x7];
-    uint64_t offset6 = offset5 + steps[(step_idx + 5) & 0x7];
-    uint64_t offset7 = offset6 + steps[(step_idx + 6) & 0x7];
-    uint64_t prime_step_in_bits = offset7 + steps[(step_idx + 7) & 0x7];
+    uint64_t offset1 = offset0 + steps[(step_idx + 0u) & WHEEL_STEPS_MASK];
+    uint64_t offset2 = offset1 + steps[(step_idx + 1u) & WHEEL_STEPS_MASK];
+    uint64_t offset3 = offset2 + steps[(step_idx + 2u) & WHEEL_STEPS_MASK];
+    uint64_t offset4 = offset3 + steps[(step_idx + 3u) & WHEEL_STEPS_MASK];
+    uint64_t offset5 = offset4 + steps[(step_idx + 4u) & WHEEL_STEPS_MASK];
+    uint64_t offset6 = offset5 + steps[(step_idx + 5u) & WHEEL_STEPS_MASK];
+    uint64_t offset7 = offset6 + steps[(step_idx + 6u) & WHEEL_STEPS_MASK];
+    uint64_t prime_step_in_bits = offset7 + steps[(step_idx + 7u) & WHEEL_STEPS_MASK];
     uint64_t max_unroll_idx = end_bit - min(end_bit, prime_step_in_bits);
 
     while (start_bit < max_unroll_idx)  {
@@ -576,34 +585,118 @@ void Eratosthenes::seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_
     while (start_bit < end_bit)  {
         reset_bit(start_bit);
         start_bit += steps[next_step_idx];
-        next_step_idx = (next_step_idx + 1) & 0x7;
+        next_step_idx = (next_step_idx + 1u) & WHEEL_STEPS_MASK;
     }
 
     prime_steps.step_idx = next_step_idx;
     prime_steps.bit_idx = start_bit;
 }
+#endif
 
+#ifdef WHEEL_2_3
+void Eratosthenes::seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
+    uint64_t start_bit = prime_steps.bit_idx;
+    if (start_bit >= end_bit)
+        return;
+
+    uint8_t step_idx = prime_steps.step_idx;
+    uint32_t steps[WHEEL_STEPS] = { STEPS(prime_steps) };
+
+    uint64_t offset0 = 0ul;
+    uint64_t offset1 = offset0 + steps[(step_idx + 0u) & WHEEL_STEPS_MASK];
+    uint64_t prime_step_in_bits = offset1 + steps[(step_idx + 1u) & WHEEL_STEPS_MASK];
+    uint64_t offset2 = offset0 + prime_step_in_bits;
+    uint64_t offset3 = offset1 + prime_step_in_bits;
+    uint64_t loop_step = 2ul * prime_step_in_bits;
+    uint64_t max_unroll_idx = end_bit - min(end_bit, loop_step);
+
+    while (start_bit < max_unroll_idx)  {
+        reset_bit(start_bit + offset0);
+        reset_bit(start_bit + offset1);
+        reset_bit(start_bit + offset2);
+        reset_bit(start_bit + offset3);
+        start_bit += loop_step;
+    }
+
+    assert(start_bit + loop_step >= end_bit);
+
+    uint8_t next_step_idx = step_idx;
+    while (start_bit < end_bit)  {
+        reset_bit(start_bit);
+        start_bit += steps[next_step_idx];
+        next_step_idx = (next_step_idx + 1u) & WHEEL_STEPS_MASK;
+    }
+
+    prime_steps.step_idx = next_step_idx;
+    prime_steps.bit_idx = start_bit;
+}
+#endif
+
+#ifdef WHEEL_2
+void Eratosthenes::seed_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
+    uint64_t start_bit = prime_steps.bit_idx;
+    if (start_bit >= end_bit)
+        return;
+
+    uint64_t offset0 = 0ul, offset1 = prime_steps.step0;
+    uint64_t offset2 = 2ul * offset1, offset3 = offset2 + offset1;
+    uint64_t loop_step = 4ul * offset1;
+    uint64_t max_unroll_idx = end_bit - min(end_bit, loop_step);
+
+    while (start_bit < max_unroll_idx)  {
+        reset_bit(start_bit + offset0);
+        reset_bit(start_bit + offset1);
+        reset_bit(start_bit + offset2);
+        reset_bit(start_bit + offset3);
+        start_bit += loop_step;
+    }
+
+    assert(start_bit + loop_step >= end_bit);
+
+    while (start_bit < end_bit)  {
+        reset_bit(start_bit);
+        start_bit += offset1;
+    }
+
+    prime_steps.bit_idx = start_bit;
+}
+#endif
+
+#if defined WHEEL_2_3_5 || defined WHEEL_2_3
 void Eratosthenes::seed_bit_range_large(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
     uint64_t start_bit = prime_steps.bit_idx;
     if (start_bit >= end_bit)
         return;
 
-    uint32_t steps[8ul] = {
-        prime_steps.step0, prime_steps.step1, prime_steps.step2, prime_steps.step3,
-        prime_steps.step4, prime_steps.step5, prime_steps.step6, prime_steps.step7
-    };
+    uint32_t steps[WHEEL_STEPS] = { STEPS(prime_steps) };
 
     uint8_t next_step_idx = prime_steps.step_idx;
     while (start_bit < end_bit)  {
         reset_bit(start_bit);
         start_bit += steps[next_step_idx];
-        next_step_idx = (next_step_idx + 1) & 0x7;
+        next_step_idx = (next_step_idx + 1) & WHEEL_STEPS_MASK;
     }
 
     prime_steps.step_idx = next_step_idx;
     prime_steps.bit_idx = start_bit;
 }
+#endif
 
+#ifdef WHEEL_2
+void Eratosthenes::seed_bit_range_large(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
+    uint64_t start_bit = prime_steps.bit_idx;
+    if (start_bit >= end_bit)
+        return;
+
+    uint64_t step = prime_steps.step0;
+    while (start_bit < end_bit)  {
+        reset_bit(start_bit);
+        start_bit += step;
+    }
+
+    prime_steps.bit_idx = start_bit;
+}
+#endif
 
 vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime) {
     // Calculate seeding patterns for small prime numbers.
@@ -652,6 +745,7 @@ vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime) {
     return masks;
 }
 
+#ifdef WHEEL_2_3_5
 constexpr array<uint64_t, WHEEL_STEPS> Eratosthenes::compute_wheel_2_3_5()    {
     uint64_t wheel_idx = 0ul;
     array<uint64_t, WHEEL_STEPS> wheel = { };
@@ -681,3 +775,14 @@ constexpr array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::compute_modulo_to_whe
 
 alignas(64) const array<uint64_t, WHEEL_STEPS> Eratosthenes::wheel = Eratosthenes::compute_wheel_2_3_5();
 alignas(32) const array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = Eratosthenes::compute_modulo_to_wheel_idx();
+#endif
+
+#ifdef WHEEL_2_3
+alignas(64) const array<uint64_t, WHEEL_STEPS> Eratosthenes::wheel = { 1ul, 5ul };
+alignas(32) const array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = { -1, 0, -1, -1, -1, 1 };
+#endif
+
+#ifdef WHEEL_2
+alignas(64) const array<uint64_t, WHEEL_STEPS> Eratosthenes::wheel = { 1ul };
+alignas(32) const array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = { -1, 0 };
+#endif
