@@ -85,15 +85,18 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
 
 Eratosthenes::Eratosthenes(const string& filename) : segment_size(DEFAULT_SEGMENT_SIZE) {
     uint64_t wheel_type = UINT64_ONE_MASK;
+    constexpr uint64_t buffer_size = 1ul<<20ul;
+    char iobuffer[buffer_size];
 
     ifstream IN(filename.c_str(), ios::in | ios::binary);
+    IN.rdbuf()->pubsetbuf(iobuffer, buffer_size);
 
     IN.read(reinterpret_cast<char*>(&sieve_bits), UINT64_BYTES);
     IN.read(reinterpret_cast<char*>(&primes_to), UINT64_BYTES);
     IN.read(reinterpret_cast<char*>(&wheel_type), UINT64_BYTES);
     if (wheel_type != WHEEL_STEPS)  {
         cerr<<"Incompatible binary for the current wheel!"<<endl;
-        throw invalid_argument("The input file is for the wheel with " + to_string(wheel_type) + "steps!");
+        throw invalid_argument("The input file is for the wheel with " + to_string(wheel_type) + " steps!");
     }
 
     sieve_size = sieve_size_elems(sieve_bits);
