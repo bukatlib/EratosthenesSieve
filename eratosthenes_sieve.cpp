@@ -4,29 +4,9 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
-#include <numeric>
 #include <stdexcept>
 #include "cpu_info.h"
 #include "eratosthenes_sieve.h"
-
-#ifdef WHEEL_2_3_5
-#define STEPS(prime_steps)  \
-        prime_steps.step0, prime_steps.step1, prime_steps.step2, prime_steps.step3, \
-        prime_steps.step4, prime_steps.step5, prime_steps.step6, prime_steps.step7
-#define STEP_IN_BITS(steps) \
-        steps[0] + steps[1] + steps[2] + steps[3] + steps[4] + steps[5] + steps[6] + steps[7]
-#endif
-
-#ifdef WHEEL_2_3
-#define STEPS(prime_steps) prime_steps.step0, prime_steps.step1
-#define STEP_IN_BITS(steps) steps[0] + steps[1]
-#endif
-
-#ifdef WHEEL_2
-#define STEPS(prime_steps) prime_steps.step0
-#define STEP_IN_BITS(steps) steps[0]
-#endif
-
 
 using namespace std;
 using namespace std::chrono;
@@ -131,7 +111,7 @@ void Eratosthenes::sieve_primes()    {
     uint64_t segment_start = 0ul, segment_end = min(segment_size, sieve_bits);
 
     prime_bit_masks bit_masks;
-    prime_wheel_data wheel_data;
+    prime_wheel_data wheel_data = make_tuple(vector<prime_sieve_state>(), vector<prime_sieve_steps>());
 
     while ((prime_bit_idx = find_next_set_bit(prime_bit_idx)) < sieve_bits)  {
         if (prime_bit_idx >= segment_end)   {
@@ -150,16 +130,22 @@ void Eratosthenes::sieve_primes()    {
         }
 
         // Sieve multiples of the prime, primes larger or equal to prime^2 are considered.
-        prime_wheel_steps prime_steps = wheel_steps(prime);
-        sieve_bit_range_medium(prime_steps, segment_end);
+        auto [prime_state, prime_steps] = wheel_steps(prime);
+        sieve_bit_range_medium(prime_state, prime_steps, segment_end);
 
-        if (prime <= min(MAX_SMALL_PRIME, UINT64_BITS))
+        if (prime <= min(MAX_SMALL_PRIME, UINT64_BITS)) {
             bit_masks.push_back(seeding_pattern(prime));
-        else
-            wheel_data.push_back(prime_steps);
+        } else {
+            get<vector<prime_sieve_state>>(wheel_data).push_back(prime_state);
+            get<vector<prime_sieve_steps>>(wheel_data).push_back(prime_steps);
+        }
 
         prime_bit_idx++;
     }
+
+    // Dispose of extra unneeded memory.
+    get<vector<prime_sieve_state>>(wheel_data).shrink_to_fit();
+    get<vector<prime_sieve_steps>>(wheel_data).shrink_to_fit();
 
     uint64_t chunk_size = WORKCHUNK_SEGMENTS * segment_size;
     uint64_t chunk_last_idx = segment_end + chunk_size * ((sieve_bits - segment_end) / chunk_size);
@@ -435,12 +421,17 @@ alignas(64) const array<uint64_t, WHEEL_STEPS> Eratosthenes::wheel = { 1ul };
 alignas(32) const array<int8_t, WHEEL_CIRCUMFERENCE> Eratosthenes::modulo_to_idx = { -1, 0 };
 #endif
 
-Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
+tuple<Eratosthenes::prime_sieve_state, Eratosthenes::prime_sieve_steps> Eratosthenes::wheel_steps(uint64_t prime)   {
+    // Get the minimal bit range step for the current prime.
+    uint64_t mult_bit_step = 0ul;
+    if (!is_in_image(prime, &mult_bit_step))
+        throw runtime_error("Prime " + to_string(prime) + " not located in the sieve image!?");
+    assert(mult_bit_step < UINT32_MAX);
+
     // Start from the square of the found prime.
     uint64_t current_number = prime * prime;
-
     array<bool, WHEEL_STEPS> modulo_idx_found = {};
-    array<uint64_t, WHEEL_STEPS> wheel_modulo_idxs = {};
+    array<uint64_t, WHEEL_STEPS + 1ul> wheel_modulo_idxs = {};
 
     do {
         uint64_t bit_idx = 0ul;
@@ -458,47 +449,34 @@ Eratosthenes::prime_wheel_steps Eratosthenes::wheel_steps(uint64_t prime)   {
         current_number += prime;
     } while (find(modulo_idx_found.cbegin(), modulo_idx_found.cend(), false) != modulo_idx_found.cend());
 
-    array<uint64_t, WHEEL_STEPS + 1ul> bit_idxs_shifted = {};
-    auto min_bit_idx_sit = min_element(wheel_modulo_idxs.cbegin(), wheel_modulo_idxs.cend());
-    for (uint64_t i = 0ul; i < wheel_modulo_idxs.size(); ++i)
-        bit_idxs_shifted[i] = wheel_modulo_idxs[i] - *min_bit_idx_sit;
-    bit_idxs_shifted[WHEEL_STEPS] = WHEEL_STEPS * prime;
+    sort(wheel_modulo_idxs.begin(), wheel_modulo_idxs.begin() + WHEEL_STEPS);
+    wheel_modulo_idxs[WHEEL_STEPS] = wheel_modulo_idxs[0] + prime * WHEEL_STEPS;
 
-    array<uint64_t, WHEEL_STEPS> prime_steps = {};
-    sort(bit_idxs_shifted.begin(), bit_idxs_shifted.end());
-    for (uint64_t i = 0ul; i + 1ul < bit_idxs_shifted.size(); ++i)
-        prime_steps[i] = bit_idxs_shifted[i + 1ul] - bit_idxs_shifted[i];
+    prime_sieve_state state;
+    #ifndef WHEEL_2
+    state.step_idx = 0;
+    #endif
+    state.bit_idx = wheel_modulo_idxs[0];
 
-    assert(accumulate(prime_steps.cbegin(), prime_steps.cend(), 0ul) == WHEEL_STEPS * prime);
-
-    prime_wheel_steps wheel_steps_struct;
-
+    prime_sieve_steps steps;
     #ifdef WHEEL_2_3_5
-    wheel_steps_struct.step_idx = 0;
-    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
-    wheel_steps_struct.step0 = prime_steps[0];
-    wheel_steps_struct.step1 = prime_steps[1];
-    wheel_steps_struct.step2 = prime_steps[2];
-    wheel_steps_struct.step3 = prime_steps[3];
-    wheel_steps_struct.step4 = prime_steps[4];
-    wheel_steps_struct.step5 = prime_steps[5];
-    wheel_steps_struct.step6 = prime_steps[6];
-    wheel_steps_struct.step7 = prime_steps[7];
+    steps.mult_bit_step = static_cast<uint32_t>(mult_bit_step);
+
+    for (uint64_t i = 0ul; i + 1ul < wheel_modulo_idxs.size(); ++i)  {
+        uint64_t mult0 = sieve_bit_to_number(wheel_modulo_idxs[i + 0]);
+        uint64_t mult1 = sieve_bit_to_number(wheel_modulo_idxs[i + 1]);
+        assert((mult1 - mult0) % prime == 0);
+        uint64_t mult = (mult1 - mult0) / prime;
+        uint64_t off = wheel_modulo_idxs[i + 1] - mult * mult_bit_step - wheel_modulo_idxs[i];
+        assert(mult < MAX_COMPRESS_STEP_COEFF && off < MAX_COMPRESS_STEP_COEFF);
+        steps.defs[i] = { static_cast<uint8_t>(mult), static_cast<uint8_t>(off) };
+    }
+    #else
+    for (uint64_t i = 0ul; i + 1ul < wheel_modulo_idxs.size(); ++i)
+        steps.defs[i] = wheel_modulo_idxs[i + 1] - wheel_modulo_idxs[i];
     #endif
 
-    #ifdef WHEEL_2_3
-    wheel_steps_struct.step_idx = 0;
-    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
-    wheel_steps_struct.step0 = prime_steps[0];
-    wheel_steps_struct.step1 = prime_steps[1];
-    #endif
-
-    #ifdef WHEEL_2
-    wheel_steps_struct.bit_idx = *min_bit_idx_sit;
-    wheel_steps_struct.step0 = prime_steps[0];
-    #endif
-
-    return wheel_steps_struct;
+    return make_tuple(state, steps);
 }
 
 vector<uint64_t> Eratosthenes::seeding_pattern(uint64_t prime) {
@@ -562,17 +540,41 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
         pattern_idxs[i] = pattern_idx;
     }
 
-    prime_wheel_data wheel_steps;
-    wheel_steps.reserve(wheel_data.size());
-    uint64_t min_idx_big_step = wheel_data.size();
-    constexpr uint64_t MAX_STEPS_FOR_SMALL = 2ul;
+    const auto& [prime_sieve_states, prime_sieve_csteps] = wheel_data;
+    uint64_t max_num_of_states = prime_sieve_states.size();
+    assert(max_num_of_states == prime_sieve_csteps.size());
 
-    for (uint64_t i = 0ul; i < wheel_data.size(); ++i)  {
-        prime_wheel_steps prime_data = wheel_data[i];
-        uint32_t steps[WHEEL_STEPS] = { STEPS(prime_data) };
-        uint64_t sieve_step_in_bits = STEP_IN_BITS(steps);
+    #ifdef WHEEL_2_3_5
+    vector<uint32_t> compress_steps_idxs;
+    vector<prime_sieve_state> prime_proc_states;
+    compress_steps_idxs.reserve(max_num_of_states);
+    #else
+    vector<prime_sieve_bundle> prime_proc_states;
+    #endif
+    prime_proc_states.reserve(max_num_of_states);
 
-        uint64_t init_bit = prime_data.bit_idx;
+    uint64_t min_idx_big_step = max_num_of_states;
+
+    for (uint64_t i = 0ul; i < max_num_of_states; ++i)  {
+        prime_sieve_state state = prime_sieve_states[i];
+        prime_sieve_steps csteps = prime_sieve_csteps[i];
+
+        uint32_t steps[WHEEL_STEPS];
+        uint64_t sieve_step_in_bits = 0ul;
+        #ifdef WHEEL_2_3_5
+        uint32_t bit_mult = csteps.mult_bit_step;
+        for (uint64_t s = 0ul; s < WHEEL_STEPS; ++s)    {
+            steps[s] = bit_mult * csteps.defs[s].mult + csteps.defs[s].off;
+            sieve_step_in_bits += steps[s];
+        }
+        #else
+        for (uint64_t s = 0ul; s < WHEEL_STEPS; ++s)    {
+            steps[s] = csteps.defs[s];
+            sieve_step_in_bits += steps[s];
+        }
+        #endif
+
+        uint64_t init_bit = state.bit_idx;
         uint64_t step_mult = (max(start_bit, init_bit) - init_bit) / sieve_step_in_bits;
         uint64_t start_bit_wheel_idx = init_bit + step_mult * sieve_step_in_bits;
         assert((start_bit_wheel_idx - init_bit) % sieve_step_in_bits == 0ul);
@@ -581,7 +583,7 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
         if (start_bit_wheel_idx < start_bit)
             start_bit_wheel_idx += sieve_step_in_bits;
         #else
-        uint8_t step_idx = prime_data.step_idx;
+        uint8_t step_idx = state.step_idx;
         while (start_bit_wheel_idx < start_bit) {
             start_bit_wheel_idx += steps[step_idx];
             step_idx = (step_idx + 1u) & WHEEL_STEPS_MASK;
@@ -590,16 +592,33 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
 
         if (start_bit_wheel_idx < end_bit)   {
             #if not defined WHEEL_2
-            prime_data.step_idx = step_idx;
+            state.step_idx = step_idx;
             #endif
-            prime_data.bit_idx = start_bit_wheel_idx;
-            if (MAX_STEPS_FOR_SMALL*sieve_step_in_bits > segment_size)
+            state.bit_idx = start_bit_wheel_idx;
+
+            #ifdef WHEEL_2_3_5
+            // Unrolled sieving is used if we can make at least 1.25 full steps.
+            uint64_t threshold = sieve_step_in_bits + (sieve_step_in_bits >> 2ul);
+            #elif defined WHEEL_2_3
+            // Unrolled sieving is used if we can make at least 2.5 full steps (loop is two full steps).
+            uint64_t threshold = 2ul * sieve_step_in_bits + (sieve_step_in_bits >> 1ul);
+            #else
+            // Unrolled sieving is used if we can make at least 5 full steps (loop is four full steps).
+            uint64_t threshold = 5ul * sieve_step_in_bits;
+            #endif
+            if (threshold > segment_size)
                 min_idx_big_step = min(min_idx_big_step, i);
-            wheel_steps.push_back(prime_data);
+
+            #ifdef WHEEL_2_3_5
+            compress_steps_idxs.push_back(i);
+            prime_proc_states.push_back(state);
+            #else
+            prime_proc_states.emplace_back(state, csteps);
+            #endif
         }
     }
 
-    min_idx_big_step = min(min_idx_big_step, wheel_steps.size());
+    min_idx_big_step = min(min_idx_big_step, prime_proc_states.size());
 
     for (uint64_t segment_start = start_bit; segment_start < end_bit; segment_start += segment_size)    {
         uint64_t segment_end = min(end_bit, segment_start + segment_size); 
@@ -607,13 +626,21 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
         // Zero multiples of small primes by using bit masks.
         sieve_bit_range_small(masks, pattern_idxs, segment_start, segment_end);
 
-        // Reset idividual bits for medium primes.
-        for (uint64_t j = 0ul; j < min_idx_big_step; ++j)
-            sieve_bit_range_medium(wheel_steps[j], segment_end);
+        #ifdef WHEEL_2_3_5
+        #define GET_STATE(j) prime_proc_states[j]
+        #define GET_STEPS(j) prime_sieve_csteps[compress_steps_idxs[j]]
+        #else
+        #define GET_STATE(j) prime_proc_states[j].state
+        #define GET_STEPS(j) prime_proc_states[j].steps
+        #endif
 
-        // Reset idividual bits for large primes.
-        for (uint64_t j = min_idx_big_step; j < wheel_steps.size(); ++j)
-            sieve_bit_range_large(wheel_steps[j], segment_end);
+        // Reset individual bits for medium primes.
+        for (uint64_t j = 0ul; j < min_idx_big_step; ++j)
+            sieve_bit_range_medium(GET_STATE(j), GET_STEPS(j), segment_end);
+
+        // Reset individual bits for large primes.
+        for (uint64_t j = min_idx_big_step; j < prime_proc_states.size(); ++j)
+            sieve_bit_range_large(GET_STATE(j), GET_STEPS(j), segment_end);
     }
 }
 
@@ -650,14 +677,17 @@ void Eratosthenes::sieve_bit_range_small(const prime_bit_masks& masks, vector<ui
 }
 
 #ifdef WHEEL_2_3_5
-void Eratosthenes::sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
-    uint64_t start_bit = prime_steps.bit_idx;
+void Eratosthenes::sieve_bit_range_medium(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit)   {
+    uint64_t start_bit = state.bit_idx;
     if (start_bit >= end_bit)
         return;
 
-    uint8_t step_idx = prime_steps.step_idx;
-    uint32_t steps[WHEEL_STEPS] = { STEPS(prime_steps) };
+    uint32_t steps[WHEEL_STEPS];
+    uint32_t bit_mult = csteps.mult_bit_step;
+    for (uint64_t s = 0ul; s < WHEEL_STEPS; ++s)
+        steps[s] = bit_mult * csteps.defs[s].mult + csteps.defs[s].off;
 
+    uint8_t step_idx = state.step_idx;
     uint64_t offset0 = 0ul;
     uint64_t offset1 = offset0 + steps[(step_idx + 0u) & WHEEL_STEPS_MASK];
     uint64_t offset2 = offset1 + steps[(step_idx + 1u) & WHEEL_STEPS_MASK];
@@ -683,26 +713,25 @@ void Eratosthenes::sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64
 
     assert(start_bit + prime_step_in_bits >= end_bit);
 
-    uint8_t next_step_idx = step_idx;
     while (start_bit < end_bit)  {
         reset_bit(start_bit);
-        start_bit += steps[next_step_idx];
-        next_step_idx = (next_step_idx + 1u) & WHEEL_STEPS_MASK;
+        start_bit += steps[step_idx];
+        step_idx = (step_idx + 1u) & WHEEL_STEPS_MASK;
     }
 
-    prime_steps.step_idx = next_step_idx;
-    prime_steps.bit_idx = start_bit;
+    state.step_idx = step_idx;
+    state.bit_idx = start_bit;
 }
 #endif
 
 #ifdef WHEEL_2_3
-void Eratosthenes::sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
-    uint64_t start_bit = prime_steps.bit_idx;
+void Eratosthenes::sieve_bit_range_medium(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit)   {
+    uint64_t start_bit = state.bit_idx;
     if (start_bit >= end_bit)
         return;
 
-    uint8_t step_idx = prime_steps.step_idx;
-    uint32_t steps[WHEEL_STEPS] = { STEPS(prime_steps) };
+    uint8_t step_idx = state.step_idx;
+    uint32_t steps[WHEEL_STEPS] = { csteps.defs[0], csteps.defs[1] };
 
     uint64_t offset0 = 0ul;
     uint64_t offset1 = offset0 + steps[(step_idx + 0u) & WHEEL_STEPS_MASK];
@@ -722,25 +751,24 @@ void Eratosthenes::sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64
 
     assert(start_bit + loop_step >= end_bit);
 
-    uint8_t next_step_idx = step_idx;
     while (start_bit < end_bit)  {
         reset_bit(start_bit);
-        start_bit += steps[next_step_idx];
-        next_step_idx = (next_step_idx + 1u) & WHEEL_STEPS_MASK;
+        start_bit += steps[step_idx];
+        step_idx = (step_idx + 1u) & WHEEL_STEPS_MASK;
     }
 
-    prime_steps.step_idx = next_step_idx;
-    prime_steps.bit_idx = start_bit;
+    state.step_idx = step_idx;
+    state.bit_idx = start_bit;
 }
 #endif
 
 #ifdef WHEEL_2
-void Eratosthenes::sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
-    uint64_t start_bit = prime_steps.bit_idx;
+void Eratosthenes::sieve_bit_range_medium(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit)   {
+    uint64_t start_bit = state.bit_idx;
     if (start_bit >= end_bit)
         return;
 
-    uint64_t offset0 = 0ul, offset1 = prime_steps.step0;
+    uint64_t offset0 = 0ul, offset1 = csteps.defs[0];
     uint64_t offset2 = 2ul * offset1, offset3 = offset2 + offset1;
     uint64_t loop_step = 4ul * offset1;
     uint64_t max_unroll_idx = end_bit - min(end_bit, loop_step);
@@ -760,42 +788,49 @@ void Eratosthenes::sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64
         start_bit += offset1;
     }
 
-    prime_steps.bit_idx = start_bit;
+    state.bit_idx = start_bit;
 }
 #endif
 
 #if defined WHEEL_2_3_5 || defined WHEEL_2_3
-void Eratosthenes::sieve_bit_range_large(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
-    uint64_t start_bit = prime_steps.bit_idx;
+void Eratosthenes::sieve_bit_range_large(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit)    {
+    uint64_t start_bit = state.bit_idx;
     if (start_bit >= end_bit)
         return;
 
-    uint32_t steps[WHEEL_STEPS] = { STEPS(prime_steps) };
+    uint8_t step_idx = state.step_idx;
+    #ifdef WHEEL_2_3_5
+    uint32_t bit_mult = csteps.mult_bit_step;
+    #endif
 
-    uint8_t next_step_idx = prime_steps.step_idx;
     while (start_bit < end_bit)  {
         reset_bit(start_bit);
-        start_bit += steps[next_step_idx];
-        next_step_idx = (next_step_idx + 1) & WHEEL_STEPS_MASK;
+        #ifdef WHEEL_2_3_5
+        uint32_t step = bit_mult * csteps.defs[step_idx].mult + csteps.defs[step_idx].off;
+        #else
+        uint32_t step = csteps.defs[step_idx];
+        #endif
+        step_idx = (step_idx + 1) & WHEEL_STEPS_MASK;
+        start_bit += step;
     }
 
-    prime_steps.step_idx = next_step_idx;
-    prime_steps.bit_idx = start_bit;
+    state.step_idx = step_idx;
+    state.bit_idx = start_bit;
 }
 #endif
 
 #ifdef WHEEL_2
-void Eratosthenes::sieve_bit_range_large(prime_wheel_steps& prime_steps, uint64_t end_bit)    {
-    uint64_t start_bit = prime_steps.bit_idx;
+void Eratosthenes::sieve_bit_range_large(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit)    {
+    uint64_t start_bit = state.bit_idx;
     if (start_bit >= end_bit)
         return;
 
-    uint64_t step = prime_steps.step0;
+    uint64_t step = csteps.defs[0];
     while (start_bit < end_bit)  {
         reset_bit(start_bit);
         start_bit += step;
     }
 
-    prime_steps.bit_idx = start_bit;
+    state.bit_idx = start_bit;
 }
 #endif

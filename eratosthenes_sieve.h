@@ -64,51 +64,72 @@ class Eratosthenes {
         static uint64_t sieve_size_elems(uint64_t sieve_bits);
 
         #ifdef WHEEL_2_3_5
-        #pragma pack(push)
-        #pragma pack(1)
-        struct alignas(32) prime_wheel_steps {
-            uint64_t step_idx : 3;  // Eight steps for 2x3x5 wheel.
-            uint64_t bit_idx: 53;   // Will work up to 1000 TB of RAM
-            uint32_t step0: 25;     // Will work up to 620 GB of RAM, or primes up to 20 * 10^12
-            uint32_t step1: 25;
-            uint32_t step2: 25;
-            uint32_t step3: 25;
-            uint32_t step4: 25;
-            uint32_t step5: 25;
-            uint32_t step6: 25;
-            uint32_t step7: 25;
+        // Compressed step in prime's related bit multiple and offset.
+        struct step_def {
+            uint8_t mult : 4;
+            uint8_t off : 4;
         };
-        #pragma pack(pop)
+        static constexpr uint64_t MAX_COMPRESS_STEP_COEFF = 16ul;
+
+        // Definition of 8 steps - read only after the creation (one copy for all threads).
+        struct alignas(16) prime_sieve_steps {
+            uint32_t mult_bit_step;
+            uint8_t padding[4];
+            step_def defs[WHEEL_STEPS];
+        };
+
+        // The state related to each sieving prime that is unique to each thread and updated.
+        struct prime_sieve_state {
+            uint64_t step_idx : 3;  // Index of the nex step - eight steps for 2x3x5 wheel.
+            uint64_t bit_idx: 61;   // Will work up to 288'230 TB of RAM
+        };
 
         static constexpr std::array<uint64_t, WHEEL_STEPS> compute_wheel_2_3_5();
         static constexpr std::array<int8_t, WHEEL_CIRCUMFERENCE> compute_modulo_to_wheel_idx();
         #endif
 
         #ifdef WHEEL_2_3
-        struct alignas(16) prime_wheel_steps {
+        // Definition of 2 steps - read only after the creation.
+        struct prime_sieve_steps {
+            uint32_t defs[WHEEL_STEPS];
+        };
+
+        struct prime_sieve_state {
             uint64_t step_idx: 1;  // Two steps for 2x3 wheel.
             uint64_t bit_idx: 63;
-            uint32_t step0;
-            uint32_t step1;
+        };
+
+        struct alignas(16) prime_sieve_bundle {
+            prime_sieve_state state;
+            prime_sieve_steps steps;
         };
         #endif
 
         #ifdef WHEEL_2
-        struct prime_wheel_steps {
+        // Definition of 1 step - read only after the creation.
+        struct prime_sieve_steps {
+            uint32_t defs[WHEEL_STEPS];
+        };
+
+        struct prime_sieve_state {
             uint64_t bit_idx;
-            uint32_t step0;
+        };
+
+        struct prime_sieve_bundle {
+            prime_sieve_state state;
+            prime_sieve_steps steps;
         };
         #endif
 
         using prime_bit_masks = std::vector<std::vector<uint64_t>>;
-        using prime_wheel_data = std::vector<prime_wheel_steps>;
+        using prime_wheel_data = std::tuple<std::vector<prime_sieve_state>, std::vector<prime_sieve_steps>>;
 
         // List of numbers coprime to the wheel, and modulo to the wheel index (-1 if not in the wheel).
         alignas(64) static const std::array<uint64_t, WHEEL_STEPS> wheel;
         alignas(32) static const std::array<int8_t, WHEEL_CIRCUMFERENCE> modulo_to_idx;
 
         // Calculate the start bit index and steps for the given prime.
-        static prime_wheel_steps wheel_steps(uint64_t prime);
+        static std::tuple<prime_sieve_state, prime_sieve_steps> wheel_steps(uint64_t prime);
 
         // Generate a reset masks for small primes (up to 61) used for vectorized sieving.
         static std::vector<uint64_t> seeding_pattern(uint64_t prime);
@@ -116,8 +137,8 @@ class Eratosthenes {
         // Sieving methods to reset bits for small, medium, and large steps.
         void sieve_bit_range(const prime_bit_masks& masks, const prime_wheel_data& wheel_data, uint64_t start_bit, uint64_t end_bit);
         void sieve_bit_range_small(const prime_bit_masks& masks, std::vector<uint64_t>& pattern_idxs, uint64_t start_bit, uint64_t end_bit);
-        void sieve_bit_range_medium(prime_wheel_steps& prime_steps, uint64_t end_bit);
-        void sieve_bit_range_large(prime_wheel_steps& prime_steps, uint64_t end_bit);
+        void sieve_bit_range_medium(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit);
+        void sieve_bit_range_large(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit);
 
         // Exact number of bits required, number of allocated uint64_t elements, and the max prime to sieve.
         uint64_t sieve_bits;
