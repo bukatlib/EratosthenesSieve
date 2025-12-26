@@ -64,3 +64,108 @@ Found 9538769484 primes in 1.11538 secs (bandwidth 13448.3 MB/s).
        4,734670000 seconds sys
 
 
+% Performance profiling of non-PGO version:
+# Samples: 258K of event 'cycles:Pu'
+# Event count (approx.): 149327309377
+#
+# Overhead  Command          Shared Object          Symbol
+# ........  ...............  .....................  ...............................................
+#
+    76.18%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::sieve_bit_range_medium(...)
+    12.05%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::sieve_bit_range(...) [inplace sieve_bit_range_large]
+     9.65%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::sieve_bit_range_small(...)
+     1.55%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::prime_count() const [clone ._omp_fn.0]
+     0.49%  prime_sieve_ben  libc.so.6              [.] __memset_zva64
+    ....
+
+% Hotspots in sieve_bit_range_medium:
+    6.93 :   5980:   lsr     x16, x4, #6
+    1.07 :   5984:   lsr     x15, x2, #6
+    0.12 :   5988:   lsl     x12, x7, x4
+    0.10 :   598c:   lsr     x14, x8, #6
+    4.73 :   5990:   lsl     x11, x7, x2
+    1.05 :   5994:   lsr     x13, x6, #6
+    0.05 :   5998:   ldr     x18, [x0, x16, lsl #3]
+   23.57 :   599c:   lsl     x10, x7, x8
+    0.69 :   59a0:   lsl     x9, x7, x6
+    0.28 :   59a4:   add     x4, x4, x5
+    0.04 :   59a8:   bic     x12, x18, x12
+    0.05 :   59ac:   str     x12, [x0, x16, lsl #3]
+    1.46 :   59b0:   add     x2, x2, x5
+    0.44 :   59b4:   add     x8, x8, x5
+    0.03 :   59b8:   ldr     x12, [x0, x15, lsl #3]
+   16.50 :   59bc:   add     x6, x6, x5
+    0.25 :   59c0:   bic     x11, x12, x11
+    0.19 :   59c4:   str     x11, [x0, x15, lsl #3]
+    0.07 :   59c8:   ldr     x11, [x0, x14, lsl #3]
+    9.99 :   59cc:   bic     x10, x11, x10
+    0.34 :   59d0:   str     x10, [x0, x14, lsl #3]
+    0.24 :   59d4:   ldr     x10, [x0, x13, lsl #3]
+   12.21 :   59d8:   bic     x9, x10, x9
+    1.69 :   59dc:   str     x9, [x0, x13, lsl #3]
+    0.13 :   59e0:   cmp     x30, x4
+    0.09 :   59e4:   b.hi    5980
+...
+    0.12 :   59fc:   add     x7, x7, x17
+    0.50 :   5a00:   lsr     x5, x4, #6
+    0.11 :   5a04:   lsl     x2, x8, x4
+    0.15 :   5a08:   mov     x4, x7
+    0.88 :   5a0c:   ldr     x6, [x0, x5, lsl #3]
+    5.21 :   5a10:   bic     x2, x6, x2
+    0.03 :   5a14:   str     x2, [x0, x5, lsl #3]
+    0.03 :   5a18:   cmp     x7, x3
+    0.09 :   5a1c:   b.cc    59fc
+
+# Hotspots in sieve_bit_range (large primes):
+    5.79 :   5ca0:   ldr     x0, [x6]
+    6.37 :   5ca4:   cmp     x0, x28
+    0.02 :   5ca8:   b.cs    5cdc
+    5.72 :   5cac:   ldr     x3, [x19, #24]
+    0.18 :   5cb0:   ldr     w4, [x6, #8]
+    0.21 :   5cb4:   nop
+    0.99 :   5cb8:   lsr     x2, x0, #6
+    1.97 :   5cbc:   lsl     x1, x27, x0
+    3.56 :   5cc0:   add     x0, x0, x4
+    0.69 :   5cc4:   ldr     x5, [x3, x2, lsl #3]
+   53.64 :   5cc8:   bic     x1, x5, x1
+    0.16 :   5ccc:   str     x1, [x3, x2, lsl #3]
+    0.14 :   5cd0:   cmp     x0, x28
+    0.02 :   5cd4:   b.cc    5cb8
+    0.51 :   5cd8:   str     x0, [x6]
+    5.56 :   5cdc:   add     x6, x6, #0x10
+    0.20 :   5ce0:   cmp     x6, x22
+    0.00 :   5ce4:   b.ne    5ca0
+
+% Hotspots in sieve_bit_range_small:
+    0.52 :   5818:   ldr     q0, [x3, x0]
+   43.65 :   581c:   ldr     q1, [x1, x0]
+   40.51 :   5820:   and     v0.16b, v0.16b, v1.16b
+    3.86 :   5824:   str     q0, [x1, x0]
+    2.09 :   5828:   add     x0, x0, #0x10
+    1.63 :   582c:   cmp     x0, x7
+    0.44 :   5830:   b.ne    5818
+
+# Hotspots in prime_count:
+   22.87 :   43d0:   ldp     d0, d3, [x1]
+   21.92 :   43d4:   add     x2, x2, #0x4
+    0.05 :   43d8:   ldp     d2, d1, [x1, #16]
+   38.75 :   43dc:   add     x1, x1, #0x20
+    0.31 :   43e0:   cnt     v0.8b, v0.8b
+    0.18 :   43e4:   cnt     v3.8b, v3.8b
+    0.00 :   43e8:   cnt     v2.8b, v2.8b
+    0.00 :   43ec:   cnt     v1.8b, v1.8b
+    0.00 :   43f0:   addv    b0, v0.8b
+    0.56 :   43f4:   addv    b3, v3.8b
+    7.16 :   43f8:   addv    b2, v2.8b
+    0.10 :   43fc:   addv    b1, v1.8b
+    0.03 :   4400:   mov     v0.s[1], v3.s[0]
+    0.36 :   4404:   mov     v0.s[2], v2.s[0]
+    0.05 :   4408:   mov     v0.s[3], v1.s[0]
+    7.14 :   440c:   saddw   v5.2d, v5.2d, v0.2s
+    0.31 :   4410:   saddw2  v4.2d, v4.2d, v0.4s
+    0.15 :   4414:   cmp     x3, x2
+    0.08 :   4418:   b.hi    43d0
+
+# Find next true bit on ARM64:
+    1fec:       dac00000        rbit    x0, x0
+    1ff0:       dac01000        clz     x0, x0
