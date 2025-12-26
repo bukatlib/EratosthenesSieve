@@ -1,0 +1,66 @@
+$ ./prime_sieve_bench 100000000000 -                                                                                                                              
+sieve size: 50000000000 bits (6250000000 bytes, 5960.46 MBs)
+Sieve initialized in 1.12774 secs
+Primes sieved in 14.6909 secs.
+Found 4118054813 primes in 0.464756 secs (bandwidth 13447.9 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 100000000000 -':
+
+         62 118,05 msec task-clock:u                     #    3,779 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+           381 724      page-faults:u                    #    6,145 K/sec                     
+   143 239 455 721      cycles:u                         #    2,306 GHz                         (49,94%)
+   432 120 812 859      instructions:u                   #    3,02  insn per cycle              (49,96%)
+    26 332 731 083      branches:u                       #  423,914 M/sec                       (49,98%)
+       648 263 460      branch-misses:u                  #    2,46% of all branches             (50,01%)
+   136 199 421 366      L1-dcache-loads:u                #    2,193 G/sec                       (50,03%)
+     1 730 010 806      L1-dcache-load-misses:u          #    1,27% of all L1-dcache accesses   (50,05%)
+       701 953 436      LLC-loads:u                      #   11,300 M/sec                       (50,06%)
+       281 940 424      LLC-load-misses:u                #   40,17% of all LL-cache accesses    (42,90%)
+   119 493 257 353      L1-icache-loads:u                #    1,924 G/sec                       (42,89%)
+           225 673      L1-icache-load-misses:u          #    0,00% of all L1-icache accesses   (42,87%)
+   136 067 196 059      dTLB-loads:u                     #    2,190 G/sec                       (42,84%)
+         2 569 278      dTLB-load-misses:u               #    0,00% of all dTLB cache accesses  (42,82%)
+    77 870 025 985      iTLB-loads:u                     #    1,254 G/sec                       (42,81%)
+            12 328      iTLB-load-misses:u               #    0,00% of all iTLB cache accesses  (42,80%)
+
+      16,439116689 seconds time elapsed
+
+      60,096373000 seconds user
+       2,019609000 seconds sys
+
+
+$ ./prime_sieve_bench 240000000000 -                                                                                                                              
+sieve size: 120000000000 bits (15000000000 bytes, 14305.1 MBs)
+Sieve initialized in 2.64858 secs
+Primes sieved in 39.5929 secs.
+Found 9538769484 primes in 1.11538 secs (bandwidth 13448.3 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 240000000000 -':
+
+        167 168,65 msec task-clock:u                     #    3,803 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+           915 867      page-faults:u                    #    5,479 K/sec                     
+   386 270 759 617      cycles:u                         #    2,311 GHz                         (50,00%)
+ 1 103 320 517 187      instructions:u                   #    2,86  insn per cycle              (50,00%)
+    74 331 215 617      branches:u                       #  444,648 M/sec                       (49,99%)
+     2 209 089 901      branch-misses:u                  #    2,97% of all branches             (49,99%)
+   346 407 749 744      L1-dcache-loads:u                #    2,072 G/sec                       (49,99%)
+     5 396 656 607      L1-dcache-load-misses:u          #    1,56% of all L1-dcache accesses   (50,00%)
+     2 453 561 507      LLC-loads:u                      #   14,677 M/sec                       (50,00%)
+       900 999 357      LLC-load-misses:u                #   36,72% of all LL-cache accesses    (42,86%)
+   314 361 560 247      L1-icache-loads:u                #    1,881 G/sec                       (42,86%)
+           658 212      L1-icache-load-misses:u          #    0,00% of all L1-icache accesses   (42,86%)
+   346 390 292 258      dTLB-loads:u                     #    2,072 G/sec                       (42,86%)
+        10 722 734      dTLB-load-misses:u               #    0,00% of all dTLB cache accesses  (42,86%)
+   207 520 382 598      iTLB-loads:u                     #    1,241 G/sec                       (42,86%)
+            11 631      iTLB-load-misses:u               #    0,00% of all iTLB cache accesses  (42,86%)
+
+      43,959383688 seconds time elapsed
+
+     162,426405000 seconds user
+       4,734670000 seconds sys
+
+
