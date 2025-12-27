@@ -1,0 +1,171 @@
+$ ./prime_sieve_bench 1000000000000 -
+sieve size: 333333333333 bits (41666666672 bytes, 39736.4 MBs)
+Sieve initialized in 1.46241 secs
+Primes sieved in 9.99765 secs.
+Found 37607912018 primes in 0.623372 secs (bandwidth 66840.8 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 1000000000000 -':
+
+        333 010,45 msec task-clock:u                     #   24,277 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+            42 932      page-faults:u                    #  128,921 /sec                      
+ 3 187 327 634 237      instructions:u                   #    2,04  insn per cycle            
+                                                  #    0,01  stalled cycles per insn     (42,87%)
+ 1 561 560 322 085      cycles:u                         #    4,689 GHz                         (42,87%)
+    20 628 655 196      stalled-cycles-frontend:u        #    1,32% frontend cycles idle        (42,87%)
+   159 899 971 507      branches:u                       #  480,165 M/sec                       (42,87%)
+     2 236 833 612      branch-misses:u                  #    1,40% of all branches             (42,86%)
+   606 032 490 994      L1-dcache-loads:u                #    1,820 G/sec                       (42,86%)
+   324 073 923 437      L1-dcache-load-misses:u          #   53,47% of all L1-dcache accesses   (42,85%)
+     1 188 226 756      L1-icache-loads:u                #    3,568 M/sec                       (42,85%)
+         5 937 251      L1-icache-load-misses:u          #    0,50% of all L1-icache accesses   (42,85%)
+        23 966 273      dTLB-loads:u                     #   71,969 K/sec                       (42,84%)
+           955 697      dTLB-load-misses:u               #    3,99% of all dTLB cache accesses  (42,84%)
+            18 489      iTLB-loads:u                     #   55,521 /sec                        (42,85%)
+            42 230      iTLB-load-misses:u               #  228,41% of all iTLB cache accesses  (42,85%)
+    50 375 503 759      L1-dcache-prefetches:u           #  151,273 M/sec                       (42,86%)
+
+      13,717191410 seconds time elapsed
+
+     326,670399000 seconds user
+       6,339503000 seconds sys
+
+$ ./prime_sieve_bench 2000000000000 -
+sieve size: 666666666667 bits (83333333336 bytes, 79472.9 MBs)
+Sieve initialized in 2.91211 secs
+Primes sieved in 21.3403 secs.
+Found 73301896139 primes in 1.22704 secs (bandwidth 67914 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 2000000000000 -':
+
+        713 806,02 msec task-clock:u                     #   24,790 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+            70 052      page-faults:u                    #   98,139 /sec                      
+ 6 683 070 653 358      instructions:u                   #    2,02  insn per cycle            
+                                                  #    0,01  stalled cycles per insn     (42,86%)
+ 3 310 710 334 680      cycles:u                         #    4,638 GHz                         (42,86%)
+    52 641 947 360      stalled-cycles-frontend:u        #    1,59% frontend cycles idle        (42,85%)
+   350 046 202 173      branches:u                       #  490,394 M/sec                       (42,85%)
+     5 828 695 226      branch-misses:u                  #    1,67% of all branches             (42,85%)
+ 1 289 425 170 668      L1-dcache-loads:u                #    1,806 G/sec                       (42,85%)
+   666 758 331 971      L1-dcache-load-misses:u          #   51,71% of all L1-dcache accesses   (42,85%)
+     2 519 908 682      L1-icache-loads:u                #    3,530 M/sec                       (42,86%)
+        13 527 262      L1-icache-load-misses:u          #    0,54% of all L1-icache accesses   (42,86%)
+        62 499 261      dTLB-loads:u                     #   87,558 K/sec                       (42,86%)
+         2 199 253      dTLB-load-misses:u               #    3,52% of all dTLB cache accesses  (42,86%)
+            50 975      iTLB-loads:u                     #   71,413 /sec                        (42,86%)
+            54 206      iTLB-load-misses:u               #  106,34% of all iTLB cache accesses  (42,86%)
+   107 336 747 712      L1-dcache-prefetches:u           #  150,372 M/sec                       (42,86%)
+
+      28,794314245 seconds time elapsed
+
+     701,055066000 seconds user
+      12,742601000 seconds sys
+
+
+% Performance profiling of non-PGO version:
+# Samples: 1M of event 'cycles:Pu'
+# Event count (approx.): 1598683616994
+#
+# Overhead  Command          Shared Object         Symbol                                                                                        
+# ........  ...............  ....................  ..............................................................................................
+#
+    92.44%  prime_sieve_ben  prime_sieve_bench     [.] Eratosthenes::sieve_bit_range_medium
+     3.85%  prime_sieve_ben  prime_sieve_bench     [.] Eratosthenes::sieve_bit_range_small
+     2.42%  prime_sieve_ben  prime_sieve_bench     [.] Eratosthenes::sieve_bit_range
+     0.79%  prime_sieve_ben  prime_sieve_bench     [.] Eratosthenes::prime_count
+	...
+
+% Hotspots in sieve_bit_range_medium:
+    0.00 :   8850:   mov    %rax,%r8
+    0.05 :   8853:   mov    %eax,%ecx
+    0.26 :   8855:   mov    $0xfffffffffffffffe,%r9
+    4.93 :   885c:   shr    $0x6,%r8
+    0.03 :   8860:   rol    %cl,%r9
+    0.85 :   8863:   lea    0x0(%rbp,%rax,1),%rcx
+    7.50 :   8868:   and    %r9,(%rdx,%r8,8)
+    8.74 :   886c:   mov    $0xfffffffffffffffe,%r9
+    0.02 :   8873:   mov    %rcx,%r8
+    0.04 :   8876:   rol    %cl,%r9
+    4.70 :   8879:   mov    $0xfffffffffffffffe,%r14
+    0.01 :   8880:   shr    $0x6,%r8
+    0.80 :   8884:   and    %r9,(%rdx,%r8,8)
+   16.32 :   8888:   lea    (%r11,%rax,1),%r8
+    0.06 :   888c:   mov    %r8,%r9
+    1.45 :   888f:   mov    %r8d,%ecx
+    0.00 :   8892:   rol    %cl,%r14
+    0.04 :   8895:   lea    (%r12,%rax,1),%rcx
+    3.68 :   8899:   mov    $0xfffffffffffffffe,%rax
+    0.00 :   88a0:   shr    $0x6,%r9
+    0.65 :   88a4:   and    %r14,(%rdx,%r9,8)
+   17.59 :   88a8:   mov    %rcx,%r9
+    0.07 :   88ab:   rol    %cl,%rax
+    0.84 :   88ae:   shr    $0x6,%r9
+    0.17 :   88b2:   and    %rax,(%rdx,%r9,8)
+   14.68 :   88b6:   lea    (%r8,%r11,1),%rax
+    1.04 :   88ba:   cmp    %rbx,%rax
+    0.00 :   88bd:   jb     8850
+	...
+    0.18 :   8900:   mov    %eax,%ecx
+    0.23 :   8902:   mov    $0xfffffffffffffffe,%rbx
+    0.12 :   8909:   mov    %rax,%rdi
+    0.03 :   890c:   rol    %cl,%rbx
+    0.33 :   890f:   movzbl %sil,%ecx
+    0.11 :   8913:   inc    %esi
+    0.23 :   8915:   mov    (%rsp,%rcx,4),%ecx
+    0.26 :   8918:   and    $0x1,%esi
+    0.38 :   891b:   shr    $0x6,%rdi
+    0.13 :   891f:   and    %rbx,(%rdx,%rdi,8)
+    2.46 :   8923:   add    %rcx,%rax
+    0.01 :   8926:   cmp    %r10,%rax
+    0.15 :   8929:   jb     8900
+
+% Hotspots in sieve_bit_range_small:
+    0.00 :   84c0:   vmovdqu64 (%r9,%rsi,1),%zmm0
+    5.43 :   84c7:   vpandq (%r15,%rsi,1),%zmm0,%zmm0
+    4.39 :   84ce:   vmovdqu64 %zmm0,(%r15,%rsi,1)
+   80.30 :   84d5:   add    $0x40,%rsi
+    0.40 :   84d9:   cmp    %rsi,%rcx
+    0.00 :   84dc:   jne    84c0
+
+# Hotspots in sieve_bit_range (large primes):
+    0.01 :   8c90:   lea    0x8(%r12),%rdx
+    2.15 :   8c95:   mov    %r12,%rsi
+    3.71 :   8c98:   mov    %r15,%rcx
+    1.88 :   8c9b:   mov    %rbx,%rdi
+    1.86 :   8c9e:   add    $0x10,%r12
+    1.28 :   8ca2:   call   87c0 <Eratosthenes::sieve_bit_range_medium>
+    4.71 :   8ca7:   cmp    %r12,%rbp
+    4.02 :   8caa:   jne    8c90
+	...
+    0.14 :   8d00:   mov    %rcx,%rdx
+    1.37 :   8d03:   mov    $0xfffffffffffffffe,%r10
+    0.12 :   8d0a:   shr    $0x6,%rdx
+    3.35 :   8d0e:   rol    %cl,%r10
+    0.10 :   8d11:   and    %r10,(%rdi,%rdx,8)
+   30.96 :   8d15:   mov    %rax,%rdx
+    0.07 :   8d18:   xor    $0x1,%eax
+    0.56 :   8d1b:   and    $0x1,%edx
+    0.02 :   8d1e:   mov    0x8(%r8,%rdx,4),%edx
+    0.87 :   8d23:   add    %rdx,%rcx
+    0.18 :   8d26:   cmp    %r15,%rcx
+    0.00 :   8d29:   jb     8d00
+
+# Hotspots in prime_count:
+    0.00 :   6a20:   vpopcntq (%rax),%zmm1
+   91.95 :   6a26:   add    $0x40,%rax
+    0.00 :   6a2a:   vpaddq %zmm1,%zmm0,%zmm0
+    8.05 :   6a30:   cmp    %rsi,%rax
+    0.00 :   6a33:   jne    6a20
+
+% Find next true bit on AMD64:
+    f3 48 0f bc f6   tzcnt  %rsi,%rsi
+
+# Division by 24 using bit shift and modular inverse of 3 modulo 2^64.
+# vector<vector<T>> has 24 bytes per element (char* start, char* end, char* alloc_end)
+    0.00 :   8296:   movabs $0xaaaaaaaaaaaaaaab,%rsi
+	...
+    0.00 :   82ba:   sar    $0x3,%rdx
+    0.00 :   82be:   imul   %rsi,%rdx

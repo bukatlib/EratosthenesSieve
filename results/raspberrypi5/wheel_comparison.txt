@@ -2,6 +2,7 @@ CPU: Cortex-A76 - 4 x 2.4 GHz
 L1d: 64 kB, L2: 512 kB, L3: 2 MB
 DDR4 4266 MHz, 32-bit, 16 GB
 GCC 12.2.0, 6.12.48-v8-16k
+Segment size: L1d size
 
 # Sieve time in seconds using up to 4 threads.
 |----------------------------------|

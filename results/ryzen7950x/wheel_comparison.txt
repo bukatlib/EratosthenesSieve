@@ -1,3 +1,9 @@
+AMD Ryzen 9 7950X 16-Core Processor
+L1d: 32 kB, L2: 1 MB, L3: 64 MB
+96 GB DDR5 at 6000 MHz with dual channel
+GCC 15.2.1, Linux 6.12.59
+Segment size: 0.75 * L2 size
+
 # Sieve time in seconds using up to 32 threads.
 |----------------------------------|
 | WHEEL |      2 |    2x3 |  2x3x5 |
