@@ -1,0 +1,48 @@
+#define PROCESSOR_NAME "@CMAKE_PROCESSOR_NAME@"
+#define THREADS_PER_CORE "@CMAKE_THREADS_PER_CORE@"
+#define IS_64BIT "@CMAKE_IS_64BIT@"
+#define TOTAL_PHYSICAL_MEMORY "@CMAKE_TOTAL_PHYSICAL_MEMORY@"
+#define OPERATING_SYSTEM "@CMAKE_OS_NAME@ @CMAKE_OS_RELEASE@ @CMAKE_OS_VERSION@"
+
+#if @USE_WHEEL_2_3_5@
+#define WHEEL_2_3_5 1
+#define WHEEL_STEPS 8ul
+#define WHEEL_STEPS_MASK 0x7
+#define WHEEL_CIRCUMFERENCE 30ul
+#define WHEEL_MIN_SEGMENT_SIZE 1024ul
+#define WHEEL_MIN_PRIME 7ul
+#define WHEEL_IMPLICIT_PRIMES { 2ul, 3ul, 5ul }
+#define WHEEL_IMPLICIT_PRIMES_COUNT 3ul
+#endif
+
+#if @USE_WHEEL_2_3@
+#define WHEEL_2_3 1
+#define WHEEL_STEPS 2ul
+#define WHEEL_STEPS_MASK 0x1
+#define WHEEL_CIRCUMFERENCE 6ul
+#define WHEEL_MIN_SEGMENT_SIZE 2048ul
+#define WHEEL_MIN_PRIME 5ul
+#define WHEEL_IMPLICIT_PRIMES { 2ul, 3ul }
+#define WHEEL_IMPLICIT_PRIMES_COUNT 2ul
+#endif
+
+#if @USE_WHEEL_2@
+#define WHEEL_2 1
+#define WHEEL_STEPS 1ul
+#define WHEEL_CIRCUMFERENCE 2ul
+#define WHEEL_MIN_SEGMENT_SIZE 2048ul
+#define WHEEL_MIN_PRIME 3ul
+#define WHEEL_IMPLICIT_PRIMES { 2ul }
+#define WHEEL_IMPLICIT_PRIMES_COUNT 1ul
+#endif
+
+static_assert(@USE_WHEEL_2_3_5@ + @USE_WHEEL_2_3@ + @USE_WHEEL_2@ == 1, "Just one wheel should be selected!");
+
+#define BITS_PER_BYTE 8ul
+#define UINT64_BYTES sizeof(uint64_t)
+#define UINT64_BITS (BITS_PER_BYTE * sizeof(uint64_t))
+#define UINT64_ONE_MASK 0xff'ff'ff'ff'ff'ff'ff'ff
+#define UINT64_BIT_MASK 0x00'00'00'00'00'00'00'3f
+#define UINT64_IDX_SHIFT 6ul
+#define CLEAR_BIT0_MASK 0xffff'ffff'ffff'fffe
+#define ALIGN_FOUR_MASK 0xffff'ffff'ffff'fffc

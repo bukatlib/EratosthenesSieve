@@ -1,0 +1,67 @@
+$ ./prime_sieve_bench 10000000000 -
+sieve size: 2666666666 bits (333333336 bytes, 317.891 MBs)
+Sieve initialized in 0.0196431 secs
+Primes sieved in 0.086731 secs.
+Found 455052511 primes in 0.00658488 secs (bandwidth 50621 MB/s).
+
+$ ./prime_sieve_bench 100000000000 -
+sieve size: 26666666666 bits (3333333336 bytes, 3178.91 MBs)
+Sieve initialized in 0.123631 secs
+Primes sieved in 0.704777 secs.
+Found 4118054813 primes in 0.0555799 secs (bandwidth 59973.7 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 100000000000 -':
+
+         22 837,55 msec task-clock:u                     #   22,606 CPUs utilized
+                 0      context-switches:u               #    0,000 /sec
+                 0      cpu-migrations:u                 #    0,000 /sec
+            11 174      page-faults:u                    #  489,282 /sec
+   215 276 906 874      instructions:u                   #    2,00  insn per cycle
+                                                  #    0,01  stalled cycles per insn     (85,71%)
+   107 422 078 325      cycles:u                         #    4,704 GHz                         (85,72%)
+     1 290 506 546      stalled-cycles-frontend:u        #    1,20% frontend cycles idle        (85,76%)
+     6 195 597 949      branches:u                       #  271,290 M/sec                       (85,70%)
+       100 176 918      branch-misses:u                  #    1,62% of all branches             (85,72%)
+    40 576 261 327      L1-dcache-loads:u                #    1,777 G/sec                       (85,69%)
+    23 366 014 254      L1-dcache-load-misses:u          #   57,59% of all L1-dcache accesses   (85,70%)
+
+       1,010264608 seconds time elapsed
+
+      22,287656000 seconds user
+       0,553743000 seconds sys
+
+$ ./prime_sieve_bench 240000000000 -
+sieve size: 64000000000 bits (8000000000 bytes, 7629.39 MBs)
+Sieve initialized in 0.287603 secs
+Primes sieved in 1.80184 secs.
+Found 9538769484 primes in 0.124686 secs (bandwidth 64161.2 MB/s).
+
+$ ./prime_sieve_bench 360000000000 -
+sieve size: 96000000000 bits (12000000000 bytes, 11444.1 MBs)
+Sieve initialized in 0.427871 secs
+Primes sieved in 2.82932 secs.
+Found 14080812200 primes in 0.182067 secs (bandwidth 65909.7 MB/s).
+
+$ ./prime_sieve_bench 450000000000 -
+sieve size: 120000000000 bits (15000000000 bytes, 14305.1 MBs)
+Sieve initialized in 0.532654 secs
+Primes sieved in 3.60045 secs.
+Found 17448448326 primes in 0.225925 secs (bandwidth 66393.6 MB/s).
+
+$ ./prime_sieve_bench 1000000000000 -
+sieve size: 266666666666 bits (33333333336 bytes, 31789.1 MBs)
+Sieve initialized in 1.17245 secs
+Primes sieved in 8.88756 secs.
+Found 37607912018 primes in 0.497419 secs (bandwidth 67012.6 MB/s).
+
+$ ./prime_sieve_bench 2000000000000 -
+sieve size: 533333333334 bits (66666666672 bytes, 63578.3 MBs)
+Sieve initialized in 2.33724 secs
+Primes sieved in 19.7338 secs.
+Found 73301896139 primes in 0.996312 secs (bandwidth 66913.4 MB/s).
+
+$ ./prime_sieve_bench 2500000000000 -
+sieve size: 666666666666 bits (83333333336 bytes, 79472.9 MBs)
+Sieve initialized in 2.90673 secs
+Primes sieved in 25.6865 secs.
+Found 90882915772 primes in 1.23576 secs (bandwidth 67434.9 MB/s).

@@ -1,0 +1,178 @@
+$ ./prime_sieve_bench 100000000000 -                                                                                                                            
+sieve size: 33333333333 bits (4166666672 bytes, 3973.64 MBs)
+Sieve initialized in 0.740691 secs
+Primes sieved in 11.1035 secs.
+Found 4118054813 primes in 0.311436 secs (bandwidth 13378.9 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 100000000000 -':
+
+         46 700,65 msec task-clock:u                     #    3,801 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+           254 716      page-faults:u                    #    5,454 K/sec                     
+   108 071 586 219      cycles:u                         #    2,314 GHz                         (49,99%)
+   307 220 787 929      instructions:u                   #    2,84  insn per cycle              (49,98%)
+    17 562 245 791      branches:u                       #  376,060 M/sec                       (49,97%)
+       517 627 863      branch-misses:u                  #    2,95% of all branches             (49,97%)
+    96 941 335 978      L1-dcache-loads:u                #    2,076 G/sec                       (49,97%)
+     1 189 398 370      L1-dcache-load-misses:u          #    1,23% of all L1-dcache accesses   (49,98%)
+       495 319 492      LLC-loads:u                      #   10,606 M/sec                       (50,01%)
+       198 442 840      LLC-load-misses:u                #   40,06% of all LL-cache accesses    (42,87%)
+    89 118 342 646      L1-icache-loads:u                #    1,908 G/sec                       (42,88%)
+           179 803      L1-icache-load-misses:u          #    0,00% of all L1-icache accesses   (42,89%)
+    97 141 480 065      dTLB-loads:u                     #    2,080 G/sec                       (42,88%)
+         1 477 572      dTLB-load-misses:u               #    0,00% of all dTLB cache accesses  (42,88%)
+    60 471 059 233      iTLB-loads:u                     #    1,295 G/sec                       (42,87%)
+             4 705      iTLB-load-misses:u               #    0,00% of all iTLB cache accesses  (42,84%)
+
+      12,285624321 seconds time elapsed
+
+      45,335638000 seconds user
+       1,363628000 seconds sys
+
+
+$ ./prime_sieve_bench 360000000000 -                                                                                                                            
+sieve size: 120000000000 bits (15000000000 bytes, 14305.1 MBs)
+Sieve initialized in 2.64792 secs
+Primes sieved in 49.8487 secs.
+Found 14080812200 primes in 1.10841 secs (bandwidth 13532.9 MB/s).
+
+ Performance counter stats for './prime_sieve_bench 360000000000 -':
+
+        210 407,06 msec task-clock:u                     #    3,839 CPUs utilized             
+                 0      context-switches:u               #    0,000 /sec                      
+                 0      cpu-migrations:u                 #    0,000 /sec                      
+           916 189      page-faults:u                    #    4,354 K/sec                     
+   488 849 902 805      cycles:u                         #    2,323 GHz                         (49,99%)
+ 1 248 053 447 804      instructions:u                   #    2,55  insn per cycle              (49,99%)
+    80 864 500 809      branches:u                       #  384,324 M/sec                       (49,99%)
+     3 094 203 550      branch-misses:u                  #    3,83% of all branches             (49,99%)
+   388 471 826 030      L1-dcache-loads:u                #    1,846 G/sec                       (49,99%)
+     5 963 200 977      L1-dcache-load-misses:u          #    1,54% of all L1-dcache accesses   (50,00%)
+     3 152 819 224      LLC-loads:u                      #   14,984 M/sec                       (50,01%)
+     1 265 160 487      LLC-load-misses:u                #   40,13% of all LL-cache accesses    (42,86%)
+   387 097 602 274      L1-icache-loads:u                #    1,840 G/sec                       (42,87%)
+           722 513      L1-icache-load-misses:u          #    0,00% of all L1-icache accesses   (42,87%)
+   388 629 727 407      dTLB-loads:u                     #    1,847 G/sec                       (42,87%)
+        12 719 483      dTLB-load-misses:u               #    0,00% of all dTLB cache accesses  (42,86%)
+   275 287 822 684      iTLB-loads:u                     #    1,308 G/sec                       (42,86%)
+            14 823      iTLB-load-misses:u               #    0,00% of all iTLB cache accesses  (42,85%)
+
+      54,810405144 seconds time elapsed
+
+     205,494673000 seconds user
+       4,902632000 seconds sys
+
+
+% Performance profiling of non-PGO version:
+# Samples: 190K of event 'cycles:Pu'
+# Event count (approx.): 110044601808
+#
+# Overhead  Command          Shared Object          Symbol
+# ........  ...............  .....................  ...............................................
+#
+    74.55%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::sieve_bit_range_medium(...)
+    15.24%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::sieve_bit_range(...) [inplace sieve_bit_range_large]
+     8.27%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::sieve_bit_range_small(...)
+     1.43%  prime_sieve_ben  prime_sieve_bench      [.] Eratosthenes::prime_count() const [clone ._omp_fn.0]
+     0.44%  prime_sieve_ben  libc.so.6              [.] __memset_zva64
+    ....
+
+% Hotspots in sieve_bit_range_medium:
+    6.29 :   5b90:   lsr     x17, x4, #6
+    1.24 :   5b94:   lsr     x16, x5, #6
+    0.09 :   5b98:   lsl     x12, x7, x4
+    0.85 :   5b9c:   lsr     x15, x2, #6
+    3.44 :   5ba0:   lsl     x11, x7, x5
+    0.98 :   5ba4:   lsr     x14, x8, #6
+    0.04 :   5ba8:   ldr     x20, [x0, x17, lsl #3]
+   20.76 :   5bac:   lsl     x10, x7, x2
+    0.59 :   5bb0:   lsl     x9, x7, x8
+    0.32 :   5bb4:   add     x4, x4, x6
+    0.03 :   5bb8:   bic     x12, x20, x12
+    0.78 :   5bbc:   str     x12, [x0, x17, lsl #3]
+    0.92 :   5bc0:   add     x5, x5, x6
+    0.45 :   5bc4:   add     x2, x2, x6
+    0.06 :   5bc8:   ldr     x12, [x0, x16, lsl #3]
+   15.02 :   5bcc:   add     x8, x8, x6
+    0.24 :   5bd0:   bic     x11, x12, x11
+    0.18 :   5bd4:   str     x11, [x0, x16, lsl #3]
+    0.10 :   5bd8:   ldr     x11, [x0, x15, lsl #3]
+    9.75 :   5bdc:   bic     x10, x11, x10
+    0.23 :   5be0:   str     x10, [x0, x15, lsl #3]
+    0.31 :   5be4:   ldr     x10, [x0, x14, lsl #3]
+   11.15 :   5be8:   bic     x9, x10, x9
+    1.48 :   5bec:   str     x9, [x0, x14, lsl #3]
+    0.09 :   5bf0:   cmp     x19, x4
+    0.08 :   5bf4:   b.hi    5b90
+...
+    0.82 :   5c08:   lsr     x5, x4, #6
+    0.54 :   5c0c:   ldr     w6, [x18, w13, sxtw #2]
+    1.80 :   5c10:   lsl     x2, x7, x4
+    0.02 :   5c14:   eor     w13, w13, #0x1
+    0.53 :   5c18:   add     x4, x4, x6
+    0.17 :   5c1c:   ldr     x6, [x0, x5, lsl #3]
+    4.50 :   5c20:   bic     x2, x6, x2
+    0.01 :   5c24:   str     x2, [x0, x5, lsl #3]
+    0.07 :   5c28:   cmp     x3, x4
+    0.04 :   5c2c:   b.hi    5c08
+
+# Hotspots in sieve_bit_range (large primes):
+    1.39 :   5f20:   ldr     x2, [x9]
+    2.74 :   5f24:   lsr     x0, x2, #1
+    0.05 :   5f28:   cmp     x0, x25
+    0.92 :   5f2c:   b.cs    5f70
+    3.57 :   5f30:   ldr     x6, [x20, #24]
+    1.21 :   5f34:   and     w2, w2, #0x1
+   10.17 :   5f38:   lsr     x3, x0, #6
+    2.08 :   5f3c:   add     x7, x9, w2, sxtw #2
+    2.59 :   5f40:   lsl     x1, x28, x0
+    1.19 :   5f44:   eor     w5, w2, #0x1
+    0.07 :   5f48:   and     w2, w5, #0xff
+    0.71 :   5f4c:   ldr     x8, [x6, x3, lsl #3]
+   42.20 :   5f50:   ldr     w7, [x7, #8]
+    5.18 :   5f54:   bic     x1, x8, x1
+    0.10 :   5f58:   str     x1, [x6, x3, lsl #3]
+    0.04 :   5f5c:   add     x0, x0, x7
+    0.77 :   5f60:   cmp     x0, x25
+    0.28 :   5f64:   b.cc    5f38
+    3.30 :   5f68:   bfi     x5, x0, #1, #63
+    2.33 :   5f6c:   str     x5, [x9]
+    3.50 :   5f70:   add     x9, x9, #0x10
+    0.03 :   5f74:   cmp     x9, x22
+    0.00 :   5f78:   b.ne    5f20
+
+% Hotspots in sieve_bit_range_small:
+    1.50 :   5a04:   mov     x0, #0x0                        // #0
+    0.37 :   5a08:   ldr     q0, [x3, x0]
+   39.78 :   5a0c:   ldr     q1, [x1, x0]
+   43.64 :   5a10:   and     v0.16b, v0.16b, v1.16b
+    3.74 :   5a14:   str     q0, [x1, x0]
+    2.29 :   5a18:   add     x0, x0, #0x10
+    1.83 :   5a1c:   cmp     x0, x7
+    0.50 :   5a20:   b.ne    5a08
+
+# Hotspots in prime_count:
+   22.82 :   43d0:   ldp     d0, d3, [x1]
+   21.57 :   43d4:   add     x2, x2, #0x4
+    0.00 :   43d8:   ldp     d2, d1, [x1, #16]
+   39.61 :   43dc:   add     x1, x1, #0x20
+    0.15 :   43e0:   cnt     v0.8b, v0.8b
+    0.22 :   43e4:   cnt     v3.8b, v3.8b
+    0.00 :   43e8:   cnt     v2.8b, v2.8b
+    0.00 :   43ec:   cnt     v1.8b, v1.8b
+    0.00 :   43f0:   addv    b0, v0.8b
+    0.45 :   43f4:   addv    b3, v3.8b
+    7.34 :   43f8:   addv    b2, v2.8b
+    0.11 :   43fc:   addv    b1, v1.8b
+    0.07 :   4400:   mov     v0.s[1], v3.s[0]
+    0.26 :   4404:   mov     v0.s[2], v2.s[0]
+    0.00 :   4408:   mov     v0.s[3], v1.s[0]
+    6.71 :   440c:   saddw   v5.2d, v5.2d, v0.2s
+    0.30 :   4410:   saddw2  v4.2d, v4.2d, v0.4s
+    0.30 :   4414:   cmp     x3, x2
+    0.08 :   4418:   b.hi    43d0
+
+# Find next true bit on ARM64:
+    1fec:       dac00000        rbit    x0, x0
+    1ff0:       dac01000        clz     x0, x0

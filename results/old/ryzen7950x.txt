@@ -1,0 +1,137 @@
+# rotl used to reset bits, PGO enabled
+sieve size: 499999999999 bits (62500000000 bytes)
+Sieve initialized in 2.14315 secs
+Primes sieved in 13.3963 secs.
+Found 37607912018 primes in 0.928122 secs (bandwidth 67340.3 MB/s).
+
+sieve size: 49999999999 bits (6250000000 bytes)
+Sieve initialized in 0.216884 secs
+Primes sieved in 1.17447 secs.
+Found 4118054813 primes in 0.0959575 secs (bandwidth 65133 MB/s).
+
+# perf stat
+ Performance counter stats for './prime_sieve_bench 1000000000000 -':
+
+        443 890,35 msec task-clock:u                     #   23,827 CPUs utilized
+                 0      context-switches:u               #    0,000 /sec
+                 0      cpu-migrations:u                 #    0,000 /sec
+            36 814      page-faults:u                    #   82,935 /sec
+ 2 091 745 305 963      cycles:u                         #    4,712 GHz
+    28 154 743 329      stalled-cycles-frontend:u        #    1,35% frontend cycles idle
+ 4 223 046 691 599      instructions:u                   #    2,02  insn per cycle
+                                                  #    0,01  stalled cycles per insn
+   206 804 172 284      branches:u                       #  465,890 M/sec
+     2 792 061 376      branch-misses:u                  #    1,35% of all branches
+
+      18,630022357 seconds time elapsed
+
+     434,728589000 seconds user
+       9,158591000 seconds sys
+
+
+# perf stat -e cycles,stalled-cycles-backend,stalled-cycles-frontend
+
+ Performance counter stats for './prime_sieve_bench 1000000000000 -':
+
+ 2 093 865 719 578      cycles:u
+   <not supported>      stalled-cycles-backend:u
+    28 010 056 617      stalled-cycles-frontend:u        #    1,34% frontend cycles idle
+
+      18,650611883 seconds time elapsed
+
+     435,153238000 seconds user
+       9,155710000 seconds sys
+
+# perf stat -e L1-dcache-loads,L1-dcache-load-misses,L1-icache-loads,L1-icache-load-misses,LLC-loads,LLC-load-misses
+ Performance counter stats for './prime_sieve_bench 1000000000000 -':
+
+    765 993 534 801      L1-dcache-loads:u
+   485 320 658 732      L1-dcache-load-misses:u          #   63,36% of all L1-dcache accesses
+     1 459 089 740      L1-icache-loads:u
+        11 183 779      L1-icache-load-misses:u          #    0,77% of all L1-icache accesses
+   <not supported>      LLC-loads:u
+   <not supported>      LLC-load-misses:u
+
+      18,646206997 seconds time elapsed
+
+     435,715765000 seconds user
+       9,111451000 seconds sys
+
+# Counting bits on AMD64
+    5da0:       62 f2 fd 48 55 08       vpopcntq (%rax),%zmm1
+    5da6:       48 83 c0 40             add    $0x40,%rax
+    5daa:       62 f1 fd 48 d4 c1       vpaddq %zmm1,%zmm0,%zmm0
+    5db0:       48 39 c1                cmp    %rax,%rcx
+    5db3:       75 eb                   jne    5da0 <_ZN12Eratosthenes11prime_countEv+0xf0>
+
+# Find next true bit on AMD64
+    62e5:       f3 48 0f bc f6          tzcnt  %rsi,%rsi
+
+# Vectorized zeroing masks for small primes on AMD64 (hotspot ~3.94 %)
+    0.00 :   69d0:   vmovdqu64 (%rsi,%r10,1),%zmm4
+    0.18 :   69d7:   vpandq (%r14,%r10,1),%zmm4,%zmm1
+    0.31 :   69de:   vmovdqu64 %zmm1,(%rsi,%r10,1)
+    3.42 :   69e5:   add    $0x40,%r10
+    0.03 :   69e9:   cmp    %r8,%r10
+    0.00 :   69ec:   jne    69d0
+
+# Unrolled clearing of bits for large primes on AMD64 (hotspot ~87.88 %)
+    0.00 :   68a0:   mov    %rax,%r13
+    0.11 :   68a3:   mov    %eax,%edx
+    2.25 :   68a5:   add    %rsi,%rax
+    0.11 :   68a8:   shr    $0x6,%r13
+    0.11 :   68ac:   shlx   %rdx,%r15,%rdx
+    4.94 :   68b1:   not    %rdx
+    0.19 :   68b4:   and    %rdx,(%r8,%r13,8)
+   15.81 :   68b8:   mov    %r10,%r13
+    0.08 :   68bb:   mov    %r10d,%edx
+    0.04 :   68be:   shr    $0x6,%r13
+    1.84 :   68c2:   shlx   %rdx,%r15,%rdx
+    0.04 :   68c7:   not    %rdx
+    0.08 :   68ca:   and    %rdx,(%r8,%r13,8)
+   16.10 :   68ce:   mov    %rbx,%r13
+    0.08 :   68d1:   mov    %ebx,%edx
+    4.22 :   68d3:   shr    $0x6,%r13
+    0.06 :   68d7:   shlx   %rdx,%r15,%rdx
+    0.09 :   68dc:   not    %rdx
+    1.40 :   68df:   and    %rdx,(%r8,%r13,8)
+   12.49 :   68e3:   mov    %rdi,%r13
+    0.04 :   68e6:   mov    %edi,%edx
+    4.85 :   68e8:   shr    $0x6,%r13
+    0.06 :   68ec:   shlx   %rdx,%r15,%rdx
+    2.94 :   68f1:   add    %rsi,%r10
+    0.07 :   68f4:   not    %rdx
+    0.04 :   68f7:   add    %rsi,%rbx
+    6.76 :   68fa:   add    %rsi,%rdi
+    0.00 :   68fd:   and    %rdx,(%r8,%r13,8)
+   13.07 :   6901:   cmp    %rcx,%rax
+    0.01 :   6904:   jb     68a0
+
+# Unrolled clearing of bits using rotl and PGO on AMD64 (hotspot ~87.14%)
+    0.00 :   71d0:   mov    %rdx,%rdi
+    3.10 :   71d3:   mov    %edx,%ecx
+    0.06 :   71d5:   mov    %r11,%rsi
+    1.85 :   71d8:   shr    $0x6,%rdi
+    0.06 :   71dc:   rol    %cl,%rsi
+    2.63 :   71df:   lea    (%r10,%rdx,1),%rcx
+    0.10 :   71e3:   and    %rsi,(%rbx,%rdi,8)
+   17.44 :   71e7:   mov    %r11,%rsi
+    0.17 :   71ea:   mov    %rcx,%rdi
+    1.77 :   71ed:   rol    %cl,%rsi
+    0.03 :   71f0:   lea    (%r12,%rdx,1),%rcx
+    1.52 :   71f4:   shr    $0x6,%rdi
+    0.10 :   71f8:   and    %rsi,(%rbx,%rdi,8)
+   16.27 :   71fc:   mov    %rcx,%rdi
+    0.03 :   71ff:   mov    %r11,%rsi
+    4.01 :   7202:   shr    $0x6,%rdi
+    0.09 :   7206:   rol    %cl,%rsi
+    1.50 :   7209:   lea    (%rax,%rdx,1),%rcx
+    0.28 :   720d:   and    %rsi,(%rbx,%rdi,8)
+   14.30 :   7211:   add    %r13,%rdx
+    0.01 :   7214:   mov    %rcx,%rdi
+    3.46 :   7217:   mov    %r11,%rsi
+    0.01 :   721a:   shr    $0x6,%rdi
+    3.11 :   721e:   rol    %cl,%rsi
+    0.11 :   7221:   and    %rsi,(%rbx,%rdi,8)
+   15.12 :   7225:   cmp    %r15,%rdx
+    0.01 :   7228:   jb     71d0
