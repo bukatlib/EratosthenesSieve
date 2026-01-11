@@ -3,6 +3,7 @@ L1d: 64 kB, L2: 512 kB, L3: 2 MB
 DDR4 4266 MHz, 32-bit, 16 GB
 GCC 12.2.0, 6.12.48-v8-16k
 Segment size: L1d size
+Sieve version: edb9b461441517aeb5ef3743d71b2e6bfff7d3e8
 
 # Sieve time in seconds using up to 4 threads.
 |----------------------------------|

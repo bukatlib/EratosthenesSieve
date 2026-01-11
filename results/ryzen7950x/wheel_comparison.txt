@@ -3,6 +3,7 @@ L1d: 32 kB, L2: 1 MB, L3: 64 MB
 96 GB DDR5 at 6000 MHz with dual channel
 GCC 15.2.1, Linux 6.12.59
 Segment size: 0.75 * L2 size
+Sieve version: edb9b461441517aeb5ef3743d71b2e6bfff7d3e8
 
 # Sieve time in seconds using up to 32 threads.
 |----------------------------------|

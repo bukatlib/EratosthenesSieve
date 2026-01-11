@@ -26,6 +26,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clan
     # Setup the target optimization with the exception of ARMv8.
     if (NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
         add_compile_options(-march=native)
+    else ()
+        # Use cortex-a53 tuning since it has non-zero LSL instruction cost
+        # and it is resulting in the use of barrel shifts in newer GCCs.
+        add_compile_options(-mcpu=native -mtune=cortex-a53)
     endif ()
 
     # More warnings desired.
