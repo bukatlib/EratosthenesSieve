@@ -7,7 +7,7 @@ and uses wheel 2, 2x3, or 2x3x5 based on the build configuration.
 
 1. Educational purposes (sieve has just about 1k lines of code).
 2. Efficient, only about 13% to 45% slower than primesieve [[1](https://github.com/kimwalisch/primesieve)].
-3. Possible to store/load sieve binary image to file.
+3. Possible to store/load sieve binary image to/from file.
 4. A good CPU/memory stress test (I detected a faulty hardware based on the wrong prime count).
 
 ## Technology
