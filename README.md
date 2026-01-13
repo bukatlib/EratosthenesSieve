@@ -108,7 +108,7 @@ Sieving with large primes is an optimized method where only a few resets
 are done per segment.
 
 Note that the wheel 2x3x5 employs steps compression to better fit `sqrt(N)`
-sieve records in L2/L3 caches (beneficial effects on Rasperry Pi 5).
+sieve records in L2/L3 caches (beneficial effects on Raspberry Pi 5).
 
 ## Experimental results
 
