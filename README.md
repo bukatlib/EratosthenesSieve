@@ -12,7 +12,7 @@ and uses wheel 2, 2x3, or 2x3x5 based on the build configuration.
 
 ## Technology
 
-- C++20 bit manipulation (rotl, popcount, and countr\_zero)
+- C++20 - bit manipulation (rotl, popcount, and countr\_zero), compile time calculations (wheel 2x3x5)
 - Parallelization with OpenMP (dynamic schedule)
 - CMake build system
 
