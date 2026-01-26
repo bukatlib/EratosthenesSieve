@@ -73,9 +73,8 @@ class Eratosthenes {
 
         // Definition of 8 steps - read only after the creation (one copy for all threads).
         struct alignas(16) prime_sieve_steps {
-            uint32_t mult_bit_step;
-            uint8_t padding[4];
             step_def defs[WHEEL_STEPS];
+            uint32_t mult_bit_step;
         };
 
         // The state related to each sieving prime that is unique to each thread and updated.
