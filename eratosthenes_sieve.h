@@ -69,7 +69,7 @@ class Eratosthenes {
             uint8_t mult : 4;
             uint8_t off : 4;
         };
-        static constexpr uint64_t MAX_COMPRESS_STEP_COEFF = 16ul;
+        static constexpr uint64_t MAX_COMPRESS_STEP_COEFF = 15ul;
 
         // Definition of 8 steps - read only after the creation (one copy for all threads).
         struct alignas(16) prime_sieve_steps {
@@ -97,11 +97,6 @@ class Eratosthenes {
             uint64_t step_idx: 1;  // Two steps for 2x3 wheel.
             uint64_t bit_idx: 63;
         };
-
-        struct alignas(16) prime_sieve_bundle {
-            prime_sieve_state state;
-            prime_sieve_steps steps;
-        };
         #endif
 
         #ifdef WHEEL_2
@@ -112,11 +107,6 @@ class Eratosthenes {
 
         struct prime_sieve_state {
             uint64_t bit_idx;
-        };
-
-        struct prime_sieve_bundle {
-            prime_sieve_state state;
-            prime_sieve_steps steps;
         };
         #endif
 

@@ -468,7 +468,7 @@ tuple<Eratosthenes::prime_sieve_state, Eratosthenes::prime_sieve_steps> Eratosth
         assert((mult1 - mult0) % prime == 0);
         uint64_t mult = (mult1 - mult0) / prime;
         uint64_t off = wheel_modulo_idxs[i + 1] - mult * mult_bit_step - wheel_modulo_idxs[i];
-        assert(mult < MAX_COMPRESS_STEP_COEFF && off < MAX_COMPRESS_STEP_COEFF);
+        assert(mult <= MAX_COMPRESS_STEP_COEFF && off <= MAX_COMPRESS_STEP_COEFF);
         steps.defs[i] = { static_cast<uint8_t>(mult), static_cast<uint8_t>(off) };
     }
     #else
@@ -544,16 +544,11 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
     uint64_t max_num_of_states = prime_sieve_states.size();
     assert(max_num_of_states == prime_sieve_csteps.size());
 
-    #ifdef WHEEL_2_3_5
-    vector<uint32_t> compress_steps_idxs;
+    uint64_t max_state_idx = 0ul;
     vector<prime_sieve_state> prime_proc_states;
-    compress_steps_idxs.reserve(max_num_of_states);
-    #else
-    vector<prime_sieve_bundle> prime_proc_states;
-    #endif
     prime_proc_states.reserve(max_num_of_states);
 
-    uint64_t min_idx_big_step = max_num_of_states;
+    uint64_t medium_count = max_num_of_states;
 
     for (uint64_t i = 0ul; i < max_num_of_states; ++i)  {
         prime_sieve_state state = prime_sieve_states[i];
@@ -582,20 +577,20 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
         #ifdef WHEEL_2
         if (start_bit_wheel_idx < start_bit)
             start_bit_wheel_idx += sieve_step_in_bits;
+
+        prime_proc_states.emplace_back(start_bit_wheel_idx);
         #else
         uint8_t step_idx = state.step_idx;
         while (start_bit_wheel_idx < start_bit) {
             start_bit_wheel_idx += steps[step_idx];
             step_idx = (step_idx + 1u) & WHEEL_STEPS_MASK;
         }
+
+        prime_proc_states.emplace_back(step_idx, start_bit_wheel_idx);
         #endif
 
-        if (start_bit_wheel_idx < end_bit)   {
-            #if not defined WHEEL_2
-            state.step_idx = step_idx;
-            #endif
-            state.bit_idx = start_bit_wheel_idx;
 
+        if (start_bit_wheel_idx < end_bit)   {
             #ifdef WHEEL_2_3_5
             // Unrolled sieving is used if we can make at least 1.25 full steps.
             uint64_t threshold = sieve_step_in_bits + (sieve_step_in_bits >> 2ul);
@@ -607,18 +602,14 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
             uint64_t threshold = 5ul * sieve_step_in_bits;
             #endif
             if (threshold > segment_size)
-                min_idx_big_step = min(min_idx_big_step, i);
+                medium_count = min(medium_count, i);
 
-            #ifdef WHEEL_2_3_5
-            compress_steps_idxs.push_back(i);
-            prime_proc_states.push_back(state);
-            #else
-            prime_proc_states.emplace_back(state, csteps);
-            #endif
+            max_state_idx = max(max_state_idx, i);
         }
     }
 
-    min_idx_big_step = min(min_idx_big_step, prime_proc_states.size());
+    uint64_t num_states = min(max_state_idx + 1ul, prime_proc_states.size());
+    medium_count = min(medium_count, num_states);
 
     for (uint64_t segment_start = start_bit; segment_start < end_bit; segment_start += segment_size)    {
         uint64_t segment_end = min(end_bit, segment_start + segment_size); 
@@ -626,21 +617,13 @@ void Eratosthenes::sieve_bit_range(const prime_bit_masks& masks, const prime_whe
         // Zero multiples of small primes by using bit masks.
         sieve_bit_range_small(masks, pattern_idxs, segment_start, segment_end);
 
-        #ifdef WHEEL_2_3_5
-        #define GET_STATE(j) prime_proc_states[j]
-        #define GET_STEPS(j) prime_sieve_csteps[compress_steps_idxs[j]]
-        #else
-        #define GET_STATE(j) prime_proc_states[j].state
-        #define GET_STEPS(j) prime_proc_states[j].steps
-        #endif
-
         // Reset individual bits for medium primes.
-        for (uint64_t j = 0ul; j < min_idx_big_step; ++j)
-            sieve_bit_range_medium(GET_STATE(j), GET_STEPS(j), segment_end);
+        for (uint64_t j = 0ul; j < medium_count; ++j)
+            sieve_bit_range_medium(prime_proc_states[j], prime_sieve_csteps[j], segment_end);
 
         // Reset individual bits for large primes.
-        for (uint64_t j = min_idx_big_step; j < prime_proc_states.size(); ++j)
-            sieve_bit_range_large(GET_STATE(j), GET_STEPS(j), segment_end);
+        for (uint64_t j = medium_count; j < num_states; ++j)
+            sieve_bit_range_large(prime_proc_states[j], prime_sieve_csteps[j], segment_end);
     }
 }
 
@@ -794,11 +777,8 @@ void Eratosthenes::sieve_bit_range_medium(prime_sieve_state& state, const prime_
 
 #if defined WHEEL_2_3_5 || defined WHEEL_2_3
 void Eratosthenes::sieve_bit_range_large(prime_sieve_state& state, const prime_sieve_steps& csteps, uint64_t end_bit)    {
-    uint64_t start_bit = state.bit_idx;
-    if (start_bit >= end_bit)
-        return;
-
     uint8_t step_idx = state.step_idx;
+    uint64_t start_bit = state.bit_idx;
     #ifdef WHEEL_2_3_5
     uint32_t bit_mult = csteps.mult_bit_step;
     #endif

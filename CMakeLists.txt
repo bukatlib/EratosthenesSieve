@@ -81,7 +81,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_link_libraries(prime_sieve_bench -lgcov)
         target_link_libraries(show_cpu_caches -lgcov)
         target_link_libraries(factorization_wheel_demo -lgcov)
-        add_custom_target(profile ./prime_sieve_bench 10000000000 - COMMAND ./show_cpu_caches COMMAND ./factorization_wheel_demo DEPENDS prime_sieve_bench show_cpu_caches factorization_wheel_demo)
+        add_custom_target(profile rm -Rf ${PROJECT_BINARY_DIR}/pgo
+            COMMAND ./prime_sieve_bench 10000000000 -
+            COMMAND ./show_cpu_caches
+            COMMAND ./factorization_wheel_demo
+            DEPENDS prime_sieve_bench show_cpu_caches factorization_wheel_demo
+        )
     endif ()
 endif()
 
