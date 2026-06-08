@@ -9,9 +9,9 @@ using namespace std;
 using namespace std::chrono;
 
 int main(int argc, char* argv[])  {
-	uint64_t to_value = 0;
-	string file_name;
     try {
+        uint64_t to_value = 0;
+        string file_name;
         if (argc == 2)  {
             file_name = argv[1];
             if (!file_name.ends_with(".bin"))   {

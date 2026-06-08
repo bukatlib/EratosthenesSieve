@@ -12,9 +12,9 @@ class Eratosthenes {
     public:
         Eratosthenes(uint64_t primes_to);
         Eratosthenes(const std::string& filename);
-		Eratosthenes(const Eratosthenes&) = delete;
-		Eratosthenes& operator=(const Eratosthenes&) = delete;
-		~Eratosthenes();
+        Eratosthenes(const Eratosthenes&) = delete;
+        Eratosthenes& operator=(const Eratosthenes&) = delete;
+        ~Eratosthenes();
 
         uint64_t bit_size() const;
         uint64_t bytes_allocated() const;
@@ -135,7 +135,7 @@ class Eratosthenes {
         uint64_t primes_to;
 
         // The sieve vector, odd numbers each consumes one bit.
-		uint64_t *sieve;
+        uint64_t *sieve;
 
         // Segment size, L1 data cache on ARM64, L2 data cache per hw thread on AMD64.
         uint64_t segment_size;

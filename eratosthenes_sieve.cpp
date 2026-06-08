@@ -16,8 +16,8 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
     primes_to(primes_to), sieve(new uint64_t[sieve_size]), segment_size(DEFAULT_SEGMENT_SIZE)
 {
     #pragma omp parallel for if(sieve_bits > PARALLEL_SIEVE_MIN_BITS) num_threads(INIT_THREADS)
-	for (uint64_t i = 0; i < sieve_size; ++i)
-		sieve[i] = UINT64_ONE_MASK;
+    for (uint64_t i = 0; i < sieve_size; ++i)
+        sieve[i] = UINT64_ONE_MASK;
 
     // Set the unused tail bits to false to avoid primes behind the requested range.
     uint64_t last_uint64_valid_bits = sieve_bits % UINT64_BITS;
@@ -46,10 +46,10 @@ Eratosthenes::Eratosthenes(uint64_t primes_to) :
             case CpuArch::AMD64:
                 // Use 75% of the exclusive L2 data cache size (best on Ryzen 7950x).
                 cache_size = cpuinfo.cache_size_exclusive(2, CacheType::Data);
-                if (cache_size)	{
-					segment_size = cache_size.value();
+                if (cache_size)    {
+                    segment_size = cache_size.value();
                     segment_size -= cache_size.value() >> 3ul;
-				}
+                }
                 break;
         }
     }
@@ -113,8 +113,8 @@ Eratosthenes::Eratosthenes(const string& filename) : segment_size(DEFAULT_SEGMEN
     IN.close();
 }
 
-Eratosthenes::~Eratosthenes()	{
-	delete[] sieve;
+Eratosthenes::~Eratosthenes()    {
+    delete[] sieve;
 }
 
 uint64_t Eratosthenes::bit_size() const {
@@ -268,7 +268,7 @@ void Eratosthenes::write_primes_to_file(const string& filename) const {
     OUT.rdbuf()->pubsetbuf(iobuffer, buffer_size);
     OUT.open(filename.c_str(), ios::out | ios::trunc);
     if (!OUT.good()) {
-    	cerr<<"Failed to create the file to write primes!"<<endl;
+        cerr<<"Failed to create the file to write primes!"<<endl;
         return;
     }
 
