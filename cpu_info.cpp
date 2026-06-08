@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <bit>
 #include <fstream>
 #include <iostream>
 #include "cpu_info.h"

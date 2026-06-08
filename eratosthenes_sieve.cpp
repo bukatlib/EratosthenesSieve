@@ -70,18 +70,45 @@ Eratosthenes::Eratosthenes(const string& filename) : segment_size(DEFAULT_SEGMEN
 
     ifstream IN(filename.c_str(), ios::in | ios::binary);
     IN.rdbuf()->pubsetbuf(iobuffer, buffer_size);
+    if (!IN.is_open() || !IN.good())
+        throw invalid_argument("Failed to open the sieve image file '" + filename + "'!");
+
+    IN.seekg(0, ios::end);
+    const streamoff file_size = IN.tellg();
+    IN.seekg(0, ios::beg);
+
+    constexpr uint64_t header_bytes = 3ul * UINT64_BYTES;
+    if (file_size < 0 || static_cast<uint64_t>(file_size) < header_bytes)
+        throw invalid_argument("The sieve image file is truncated (missing header)!");
 
     IN.read(reinterpret_cast<char*>(&sieve_bits), UINT64_BYTES);
     IN.read(reinterpret_cast<char*>(&primes_to), UINT64_BYTES);
     IN.read(reinterpret_cast<char*>(&wheel_type), UINT64_BYTES);
+    if (!IN)
+        throw invalid_argument("Failed to read the sieve image header!");
+
     if (wheel_type != WHEEL_STEPS)  {
         cerr<<"Incompatible binary for the current wheel!"<<endl;
         throw invalid_argument("The input file is for the wheel with " + to_string(wheel_type) + " steps!");
     }
 
+    if (sieve_size_bits(primes_to) != sieve_bits)
+        throw invalid_argument("Corrupted sieve image: sieve_bits inconsistent with primes_to!");
+
     sieve_size = sieve_size_elems(sieve_bits);
+    const uint64_t body_bytes = static_cast<uint64_t>(file_size) - header_bytes;
+    if (body_bytes % UINT64_BYTES != 0 || body_bytes / UINT64_BYTES != sieve_size)
+        throw invalid_argument("Corrupted sieve image: body length does not match the declared sieve size!");
+
+    // Load the precalculated sieve image from the file.
     sieve = new uint64_t[sieve_size];
     IN.read(reinterpret_cast<char*>(sieve), UINT64_BYTES * sieve_size);
+
+    if (static_cast<uint64_t>(IN.gcount()) != UINT64_BYTES * sieve_size) {
+        delete[] sieve;
+        sieve = nullptr;
+        throw invalid_argument("Failed to read the full body of the sieve image!");
+    }
 
     IN.close();
 }
@@ -311,11 +338,14 @@ void Eratosthenes::reset_bit(uint64_t bit_idx) {
 
 uint64_t Eratosthenes::find_next_set_bit(uint64_t start_bit_idx) const {
     uint64_t uint64_idx = start_bit_idx >> UINT64_IDX_SHIFT;
+    if (uint64_idx >= sieve_size)
+        return sieve_bits;
+
     uint64_t first_bit_idx = start_bit_idx - UINT64_BITS * uint64_idx;
-    assert(first_bit_idx < UINT64_BITS);
     uint64_t mask_first = UINT64_ONE_MASK<<first_bit_idx;
 
     assert(start_bit_idx <= sieve_bits);
+    assert(first_bit_idx < UINT64_BITS);
 
     uint64_t right_zero_bits = 0ul;
     uint64_t uint64_val = sieve[uint64_idx] & mask_first;
