@@ -36,7 +36,7 @@ class Eratosthenes {
 
         // The maximal small prime number used for vectorized zeroing by using bit masking.
         // up to 41: 9488 bytes; up to 61: 13696 bytes (43, 47, 53, 59, 61 contain zero holes for 2x3x5)
-        static constexpr uint64_t MAX_SMALL_PRIME = 59ul;
+        static constexpr uint64_t MAX_SMALL_PRIME = 61ul;
 
         // Constants for parallel processing.
         static constexpr uint64_t DEFAULT_SEGMENT_SIZE = 32ul * 1024ul;

@@ -37,9 +37,8 @@ $ cmake -DPGO_STAGE="Optimize" ../
 $ make -j5
 ```
 
-PGO is only supported for GCC compilers. Note that it might not improve the
-performance, for example, GCC 14 produces slower code with PGO on Raspberry Pi 5
-but GCC 12 achieves a slight speedup, therefore, the best is to experiment.
+PGO is only supported for GCC compilers. Note that Link Time Optimization (LTO)
+regresses the performance thus not enabled.
 
 ## Usage examples
 
